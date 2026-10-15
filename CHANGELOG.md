@@ -41,6 +41,11 @@ changed.
 
 - Uninstalling the `.msi` also stops Thumbring from starting with Windows.
 
+### Fixed
+
+- Quitting could, now and then, end Thumbring with a crash (an access
+  violation) instead of a clean exit.
+
 ## [0.1.0] - 2026-10-14
 
 First public release. Thumbring 0.1.0 is configured through its settings file

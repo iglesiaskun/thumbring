@@ -197,34 +197,42 @@ enum Picture {
     Letter,
 }
 
+/// The fields drop in the order they are declared, and that order matters:
+/// whatever was made from an object comes before it. Above all, the Direct2D
+/// factory goes after everything made from it. A Direct2D object holding the
+/// last reference to the factory frees it in the middle of its own release
+/// and then uses the factory's lock, already freed: now and then, an access
+/// violation when the engine quits.
 pub struct Renderer {
     width: u32,
     height: u32,
     /// Monitor scale (1.0 = 100%), for text and shadow sizes.
     scale: f64,
-    device: ID3D11Device,
-    context: ID3D11DeviceContext,
-    swap_chain: IDXGISwapChain1,
-    /// Signaled when the swap chain can take a new frame.
-    frame_waiter: HANDLE,
-    composition: IDCompositionDevice,
-    // Kept alive: dropping them would take the content off the screen.
-    _target: (IDCompositionTarget, IDCompositionVisual),
-    vertex_shader: ID3D11VertexShader,
-    pixel_shader: ID3D11PixelShader,
-    constants: ID3D11Buffer,
-    d2d: ID2D1DeviceContext5,
-    dwrite: IDWriteFactory,
-    fonts: Fonts,
-    /// The first letter of an item without an icon, for an item diameter
-    /// (in its bits): it grows with the item.
-    letter: Option<(u64, IDWriteTextFormat)>,
-    appearance: Appearance,
-    brushes: Brushes,
     /// Icons by (icon, drawn on the highlight, is the center, size bits).
     pictures: HashMap<(String, bool, bool, u32), Picture>,
     /// Icon files that could not be drawn, already told in the log.
     broken: HashSet<String>,
+    brushes: Brushes,
+    appearance: Appearance,
+    /// The first letter of an item without an icon, for an item diameter
+    /// (in its bits): it grows with the item.
+    letter: Option<(u64, IDWriteTextFormat)>,
+    fonts: Fonts,
+    d2d: ID2D1DeviceContext5,
+    /// Kept until every other Direct2D object is gone (see above).
+    _d2d_factory: ID2D1Factory1,
+    dwrite: IDWriteFactory,
+    constants: ID3D11Buffer,
+    pixel_shader: ID3D11PixelShader,
+    vertex_shader: ID3D11VertexShader,
+    // Kept alive: dropping them would take the content off the screen.
+    _target: (IDCompositionTarget, IDCompositionVisual),
+    composition: IDCompositionDevice,
+    /// Signaled when the swap chain can take a new frame.
+    frame_waiter: HANDLE,
+    swap_chain: IDXGISwapChain1,
+    context: ID3D11DeviceContext,
+    device: ID3D11Device,
 }
 
 impl Renderer {
@@ -269,9 +277,9 @@ impl Renderer {
             let (vertex_shader, pixel_shader) = compile_shaders(&device)?;
             let constants = create_constant_buffer(&device)?;
 
-            let factory2d: ID2D1Factory1 =
+            let d2d_factory: ID2D1Factory1 =
                 D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)?;
-            let d2d: ID2D1DeviceContext5 = factory2d
+            let d2d: ID2D1DeviceContext5 = d2d_factory
                 .CreateDevice(&dxgi_device)?
                 .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)?
                 .cast()?;
@@ -294,6 +302,7 @@ impl Renderer {
                 pixel_shader,
                 constants,
                 d2d,
+                _d2d_factory: d2d_factory,
                 dwrite,
                 fonts,
                 letter: None,
