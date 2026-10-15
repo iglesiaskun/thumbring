@@ -98,6 +98,29 @@ folder_items_ms = 170
 folder_close_ms = 100
 ignore_system_reduced_motion = false
 
+# Ring colors, transparency and size. Colors are written as "#RRGGBB".
+# Some looks to try, changing only these lines:
+#   dark items        item_color = "#1F2026", item_opacity = 0.94,
+#                     icon_color = "#E8E9EE", highlight_color = "#FFFFFF",
+#                     highlight_icon_color = "#16171B",
+#                     cancel_color = "#FF5A6E", label = "dark"
+#   see-through items item_opacity = 0.55, icon_color = "#16171B",
+#                     shadow = false
+#   blue highlight    highlight_color = "#2F5BD3"
+[appearance]
+item_color = "#FFFFFF"            # the items and the center button
+item_opacity = 0.96               # 0.3 to 1; the highlight is always solid
+icon_color = "#2A2B31"
+highlight_color = "#121214"       # item under the cursor, open folder, blob
+highlight_icon_color = "#FFFFFF"
+cancel_color = "#E64054"          # center button when releasing there closes
+item_size_px = 52                 # item diameter at 100% scaling, 32 to 96
+# Distance from the ring center to each item, at 100% scaling. Without it,
+# it is 1.8 times item_size_px; it goes from 1.5 to 3 times item_size_px.
+# ring_radius_px = 93.6
+shadow = true                     # soft shadow around the items
+label = "light"                   # "light" or "dark" label next to the item
+
 # THE RING
 # Hold the ring button: the ring opens around the cursor. It has 8 slots,
 # starting at the top, clockwise. A slot holds an action, a folder with up to
@@ -110,6 +133,11 @@ ignore_system_reduced_motion = false
 # code, copy, folder-open, globe, headphones, layout-grid, lock, mail, music,
 # play, redo-2, scan, scissors, settings, skip-back, skip-forward, smile,
 # sticky-note, terminal, undo-2, volume-1, volume-2, volume-x, x.
+# An icon can also be an SVG or PNG file of your own, by its full path:
+#   icon = 'C:\Users\you\Pictures\star.svg'
+# An SVG takes the icon colors where it uses currentColor or sets no color;
+# a PNG keeps its own colors. Thumbring reads the file when the settings
+# load: after changing the picture, save this file again.
 
 [ring]
 button = "forward"        # "forward", "back" or "middle"

@@ -24,7 +24,7 @@ use std::time::Instant;
 
 use thumbring_core::anim::Timing;
 use thumbring_core::command::Command;
-use thumbring_core::config::{Animation, Behavior, Config, MouseButton};
+use thumbring_core::config::{Animation, Appearance, Behavior, Config, MouseButton};
 use thumbring_core::gesture::Point;
 use thumbring_core::layout::{Geometry, OpenFolder, Vec2};
 use thumbring_core::ring::{Action, Ring, Slot};
@@ -72,6 +72,7 @@ pub struct Settings {
     pub ring: Ring,
     pub behavior: Behavior,
     pub animation: Animation,
+    pub appearance: Appearance,
 }
 
 impl Settings {
@@ -80,6 +81,7 @@ impl Settings {
             ring: config.ring.clone(),
             behavior: config.behavior.clone(),
             animation: config.animation.clone(),
+            appearance: config.appearance.clone(),
         }
     }
 }
@@ -193,7 +195,7 @@ fn run(
         }
     };
     let _ = ready.send(Ok(id));
-    warm_up(&mut overlay, &settings.ring);
+    warm_up(&mut overlay, &settings);
 
     let mut controller = Controller {
         trigger: settings.ring.button,
@@ -464,7 +466,7 @@ impl Controller {
                 return;
             }
         };
-        let geometry = Geometry::for_monitor(scale, monitor);
+        let geometry = Geometry::for_monitor(scale, &self.settings.appearance, monitor);
         let origin = Vec2::new(f64::from(monitor.left), f64::from(monitor.top));
         let point = Vec2::new(f64::from(cursor.x), f64::from(cursor.y));
         let center = geometry.place(point, monitor) - origin;
@@ -492,7 +494,7 @@ impl Controller {
             Some(overlay) => overlay.cover(monitor, scale),
             None => {
                 let mut overlay = Overlay::create(monitor, scale)?;
-                warm_up(&mut overlay, &self.settings.ring);
+                warm_up(&mut overlay, &self.settings);
                 self.overlay = Some(overlay);
                 // A new swap chain: wait for it to ask for a frame.
                 self.frame_ready = false;
@@ -688,18 +690,23 @@ impl Controller {
             if let Some(settings) = self.next_settings.take() {
                 self.settings = settings;
                 if let Some(overlay) = self.overlay.as_mut() {
-                    warm_up(overlay, &self.settings.ring);
+                    warm_up(overlay, &self.settings);
                 }
             }
         }
     }
 }
 
-/// Prepares the icons for the monitor the window covers.
-fn warm_up(overlay: &mut Overlay, ring: &Ring) {
+/// Takes the appearance and prepares the icons for the monitor the window
+/// covers.
+fn warm_up(overlay: &mut Overlay, settings: &Settings) {
     let (monitor, scale) = overlay.placement();
-    let d = Geometry::for_monitor(scale, monitor).d;
-    if let Err(e) = overlay.renderer.warm_up(ring, d) {
+    let d = Geometry::for_monitor(scale, &settings.appearance, monitor).d;
+    let ready = overlay
+        .renderer
+        .set_appearance(&settings.appearance)
+        .and_then(|()| overlay.renderer.warm_up(&settings.ring, d));
+    if let Err(e) = ready {
         warning!("could not prepare the ring icons: {e}");
     }
 }

@@ -11,9 +11,9 @@ use crate::ring::{Ring, SLOT_COUNT, Slot};
 use crate::ring_machine::{Effect, State, Target};
 use crate::screen::Rect;
 
-/// Most white circles the shader takes.
+/// Most item circles (the "white" layer) the shader takes.
 pub const MAX_WHITE: usize = 32;
-/// Most dark circles the shader takes.
+/// Most highlight circles (the "dark" layer) the shader takes.
 pub const MAX_DARK: usize = 24;
 
 /// Item that can be highlighted or carry an icon.
@@ -49,7 +49,7 @@ pub struct IconDraw {
     /// 1 = full item size.
     pub scale: f64,
     pub opacity: f64,
-    /// Drawn white, over a dark disc.
+    /// Drawn over the highlight, in its icon color.
     pub on: bool,
 }
 
@@ -64,27 +64,31 @@ pub struct LabelDraw {
 }
 
 /// Everything to draw in one frame, in window coordinates.
+///
+/// The layers are named after the default look, white items with a dark
+/// highlight; their colors come from the appearance.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Scene {
     pub ring_center: Vec2,
     /// Multiplies everything.
     pub alpha: f64,
-    /// White items, blended together with a smooth union.
+    /// The items, blended together with a smooth union.
     pub white: Vec<Circle>,
-    /// Dark highlights and the blob neck, blended together.
+    /// The highlights and the blob neck, blended together.
     pub dark: Vec<Circle>,
-    /// The travelling blob (dark).
+    /// The travelling blob (highlight).
     pub blob: Option<Blob>,
-    /// The child that receives the blob, wobbling (white).
+    /// The child that receives the blob, wobbling (item).
     pub hero: Option<Blob>,
     pub center: Circle,
-    /// 0 = translucent white, 1 = red.
+    /// 0 = the item color, 1 = the cancel color.
     pub center_red: f64,
     /// Smooth union strength of the white and dark layers.
     pub k_white: f64,
     pub k_dark: f64,
-    /// Color of the dark layer: near black, or grey while closing.
-    pub dark_color: [f32; 3],
+    /// How far the highlight color has gone towards the item color: 0 while
+    /// the ring is open, halfway while it closes.
+    pub highlight_fade: f64,
     pub icons: Vec<IconDraw>,
     pub label: Option<LabelDraw>,
     /// Something is still moving: draw another frame.
@@ -509,11 +513,7 @@ impl RingView {
             center_red,
             k_white: geometry.r * 0.22,
             k_dark: (geometry.r * (0.22 + 0.18 * animation.viscosity)).max(0.5),
-            dark_color: if closing {
-                [0.56, 0.56, 0.6]
-            } else {
-                [0.07, 0.07, 0.08]
-            },
+            highlight_fade: if closing { 0.5 } else { 0.0 },
             icons,
             label,
             active,

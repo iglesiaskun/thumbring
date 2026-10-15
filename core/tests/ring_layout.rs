@@ -2,7 +2,10 @@
 
 use std::f64::consts::PI;
 
-use thumbring_core::layout::{Geometry, ITEM_DIAMETER_PX, OpenFolder, Vec2, hero_index};
+use thumbring_core::config::{Appearance, limits};
+use thumbring_core::layout::{
+    Geometry, ITEM_DIAMETER_PX, MIN_ITEM_GAP, OpenFolder, Vec2, hero_index,
+};
 use thumbring_core::ring::{Action, Ring, Slot};
 use thumbring_core::ring_machine::Target;
 use thumbring_core::screen::Rect;
@@ -220,16 +223,19 @@ fn on_a_monitor_too_small_the_ring_opens_in_its_middle() {
 
 #[test]
 fn item_size_follows_the_monitor_scale() {
-    assert_close(Geometry::for_monitor(1.0, FULL_HD).d, 52.0);
+    let look = Appearance::default();
+    assert_close(Geometry::for_monitor(1.0, &look, FULL_HD).d, 52.0);
     let scaled = Rect::new(0, 0, 2880, 1620);
-    assert_close(Geometry::for_monitor(1.5, scaled).d, 78.0);
+    assert_close(Geometry::for_monitor(1.5, &look, scaled).d, 78.0);
 }
 
 #[test]
 fn a_small_monitor_shrinks_the_ring_down_to_a_minimum() {
-    let small = Geometry::for_monitor(1.0, Rect::new(0, 0, 800, 400));
+    let look = Appearance::default();
+    let small = Geometry::for_monitor(1.0, &look, Rect::new(0, 0, 800, 400));
     assert_close(small.d, (400.0 - 24.0) / 8.4);
-    let tiny = Geometry::for_monitor(1.0, Rect::new(0, 0, 200, 200));
+    assert_close(small.ring_r, 1.8 * small.d);
+    let tiny = Geometry::for_monitor(1.0, &look, Rect::new(0, 0, 200, 200));
     assert_close(tiny.d, 30.0);
 }
 
@@ -239,4 +245,127 @@ fn extra_margins_grow_with_the_item() {
     let big = Geometry::new(104.0);
     assert_close(big.screen_margin(), 2.0 * normal.screen_margin());
     assert_close(big.outer_r(), 2.0 * normal.outer_r());
+}
+
+// ---------------------------------------------------------------------------
+// Item size and ring radius from the appearance
+// ---------------------------------------------------------------------------
+
+fn look(item_size_px: f64, ring_radius_px: f64) -> Appearance {
+    Appearance {
+        item_size_px,
+        ring_radius_px,
+        ..Appearance::default()
+    }
+}
+
+/// A monitor big enough for any ring.
+const BIG: Rect = Rect::new(0, 0, 3840, 2160);
+
+#[test]
+fn the_appearance_sets_the_item_size_and_the_ring_radius() {
+    let g = Geometry::for_monitor(1.0, &look(40.0, 100.0), FULL_HD);
+    assert_close(g.d, 40.0);
+    assert_close(g.ring_r, 100.0);
+    assert_close(g.folder_r, 200.0);
+    // The center button follows the items; the cancel zone, the ring.
+    assert_close(g.center_r, 14.0);
+    assert_close(g.cancel_r, 45.0);
+    assert_close(g.child_spacing, PI / 8.0);
+
+    // Both grow with the monitor scale.
+    let g = Geometry::for_monitor(2.0, &look(40.0, 100.0), BIG);
+    assert_close(g.d, 80.0);
+    assert_close(g.ring_r, 200.0);
+}
+
+/// Big items with the smallest radius, small items with the largest one, and
+/// the two other corners: nothing ever overlaps.
+#[test]
+fn at_the_limits_nothing_overlaps() {
+    let (min, max) = limits::RING_RADIUS_PER_ITEM.into_inner();
+    let (small, big) = limits::ITEM_SIZE_PX.into_inner();
+    for (item, per_item) in [(big, min), (small, max), (small, min), (big, max)] {
+        let g = Geometry::for_monitor(1.0, &look(item, item * per_item), BIG);
+        assert_close(g.d, item);
+        let what = format!("{item} px items, radius {per_item} D");
+        let apart = g.d * (1.0 + MIN_ITEM_GAP) - EPS;
+
+        // Ring items, 45° apart: a gap between them and between their hit areas.
+        for slot in 0..8u8 {
+            let next = (slot + 1) % 8;
+            let distance = (g.slot_offset(slot) - g.slot_offset(next)).length();
+            assert!(distance >= apart, "{what}: slots {slot} and {next}");
+            assert!(distance > 2.0 * g.hit_r, "{what}: hit areas of {slot}");
+        }
+        // The 9 children of a full folder keep 22.5° and the same gap, and
+        // stay clear of every ring item.
+        assert_close(g.child_spacing, PI / 8.0);
+        for index in 0..9 {
+            let child = g.child_offset(0, index, 9);
+            if index < 8 {
+                let next = g.child_offset(0, index + 1, 9);
+                assert!((child - next).length() >= apart, "{what}: child {index}");
+            }
+            for slot in 0..8u8 {
+                let distance = (child - g.slot_offset(slot)).length();
+                assert!(distance >= apart, "{what}: child {index} and slot {slot}");
+            }
+        }
+        // The center button and the cancel zone stay inside the hole.
+        assert!(g.center_r <= g.cancel_r, "{what}");
+        assert!(g.cancel_r < g.ring_r - g.hit_r, "{what}");
+
+        // Each item is hit at its center, and the center at the center.
+        let ring = full_ring();
+        for slot in 0..8u8 {
+            let hit = g.hit_test(&ring, g.slot_offset(slot), None);
+            assert_eq!(hit, Target::Action { slot }, "{what}");
+        }
+        assert_eq!(
+            g.hit_test(&ring, Vec2::ZERO, None),
+            Target::Center,
+            "{what}"
+        );
+
+        // In a corner of the screen the open folder arc still fits.
+        let placed = g.place(Vec2::new(0.0, 0.0), BIG);
+        assert!(
+            placed.x - g.outer_r() >= 0.0 && placed.y - g.outer_r() >= 0.0,
+            "{what}"
+        );
+    }
+}
+
+/// A ring with an action in every slot.
+fn full_ring() -> Ring {
+    let mut ring = Ring::empty();
+    for slot in &mut ring.slots {
+        *slot = Slot::Action(action("A"));
+    }
+    ring
+}
+
+#[test]
+fn a_ring_too_big_for_the_monitor_shrinks_as_a_whole() {
+    let wide = look(96.0, 288.0);
+    let g = Geometry::for_monitor(1.0, &wide, FULL_HD);
+    // 1080 px high: (1080 - 24) / (4 × 3 + 1.2) = 80.
+    assert_close(g.d, 80.0);
+    assert_close(g.ring_r, 240.0);
+    assert!(2.0 * g.screen_margin() <= 1080.0);
+    let placed = g.place(Vec2::new(960.0, 0.0), FULL_HD);
+    assert!(placed.y - g.outer_r() >= 0.0);
+}
+
+#[test]
+fn children_spread_out_rather_than_touch() {
+    // Closer than any settings file allows: the folder arc is only 104 px away.
+    let g = Geometry::with_radius(52.0, 52.0);
+    assert!(g.child_spacing > PI / 8.0);
+    let distance = (g.child_offset(0, 0, 9) - g.child_offset(0, 1, 9)).length();
+    assert_close(distance, 52.0 * (1.0 + MIN_ITEM_GAP));
+    // Never so far apart that 9 children would go round the whole circle.
+    let g = Geometry::with_radius(52.0, 10.0);
+    assert_close(g.child_spacing, 2.0 * PI / 9.0);
 }

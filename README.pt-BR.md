@@ -169,9 +169,42 @@ botão dele como sempre foi, deixe a lista vazia: `slots = []` em `[ring]`.
 `clipboard-paste`, `code`, `copy`, `folder-open`, `globe`, `headphones`,
 `layout-grid`, `lock`, `mail`, `music`, `play`, `redo-2`, `scan`, `scissors`,
 `settings`, `skip-back`, `skip-forward`, `smile`, `sticky-note`, `terminal`,
-`undo-2`, `volume-1`, `volume-2`, `volume-x` e `x`. Sem ícone (ou com um
-desconhecido, que gera um aviso no log), o item mostra a primeira letra do
-nome.
+`undo-2`, `volume-1`, `volume-2`, `volume-x` e `x`. O ícone também pode ser
+um arquivo SVG ou PNG seu, pelo caminho completo, como
+`icon = 'C:\Users\voce\Imagens\estrela.svg'` (`%VARIÁVEIS%` funcionam, e o
+arquivo pode ter até 2 MB). O SVG usa as cores dos ícones onde usa
+`currentColor` ou não define cor; as outras cores dele ficam, e o PNG mantém
+as suas. O Thumbring lê o arquivo quando carrega as configurações: depois de
+trocar a imagem, salve as configurações de novo. Sem ícone, ou com um
+desconhecido ou um arquivo que não abre (o que gera um aviso no log), o item
+mostra a primeira letra do nome.
+
+A seção opcional `[appearance]` muda as cores, a transparência e o tamanho do
+anel. Sem ela, o anel fica como sempre foi: os valores abaixo são os padrões.
+As cores são escritas como `"#RRGGBB"`.
+
+```toml
+[appearance]
+item_color = "#FFFFFF"            # os itens e o botão central
+item_opacity = 0.96               # 0.3 a 1; o destaque é sempre sólido
+icon_color = "#2A2B31"
+highlight_color = "#121214"       # item sob o cursor, pasta aberta, gota
+highlight_icon_color = "#FFFFFF"
+cancel_color = "#E64054"          # botão central quando soltar ali fecha
+item_size_px = 52                 # diâmetro do item a 100% de escala, 32 a 96
+ring_radius_px = 93.6             # distância do centro até cada item
+shadow = true                     # sombra suave em volta dos itens
+label = "light"                   # "light" (claro) ou "dark" (escuro)
+```
+
+`ring_radius_px` vai de 1,5 a 3 vezes `item_size_px`, para os itens nunca se
+encostarem; sem ele, vale 1,8 vez `item_size_px`. As pastas abrem ao dobro da
+distância do centro, e o botão central acompanha o tamanho do item. Os
+tamanhos são a 100% de escala e crescem com a escala do monitor; num monitor
+pequeno demais para uma pasta aberta, o anel encolhe por inteiro. Para itens
+escuros, experimente `item_color = "#1F2026"`, `icon_color = "#E8E9EE"`,
+`highlight_color = "#FFFFFF"`, `highlight_icon_color = "#16171B"` e
+`label = "dark"`.
 
 ```toml
 [animation]

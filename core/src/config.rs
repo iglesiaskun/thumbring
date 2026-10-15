@@ -6,13 +6,16 @@
 
 mod load;
 
+use std::ops::RangeInclusive;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
 use crate::apps::AppName;
+use crate::color::Color;
 use crate::command::{Chord, Command, Key, Modifiers};
 use crate::gesture::{DEFAULT_THRESHOLD_PX, Direction, Outcome};
+use crate::layout::{ITEM_DIAMETER_PX, RING_RADIUS_PER_ITEM};
 use crate::ring::Ring;
 
 pub use load::{ConfigError, Loaded, Warning};
@@ -32,6 +35,13 @@ pub mod limits {
     pub const PATH_TOLERANCE_MS: RangeInclusive<u32> = 0..=1000;
     /// Minimum gesture distance, in pixels at 100% scaling.
     pub const THRESHOLD_PX: RangeInclusive<u32> = 10..=200;
+    /// Opacity of the ring items. Below 0.3 they get hard to see.
+    pub const ITEM_OPACITY: RangeInclusive<f64> = 0.3..=1.0;
+    /// Item diameter, in pixels at 100% scaling.
+    pub const ITEM_SIZE_PX: RangeInclusive<f64> = 32.0..=96.0;
+    /// Ring radius, in item diameters. At 1.5, two items 45° apart still keep
+    /// [`crate::layout::MIN_ITEM_GAP`] between them.
+    pub const RING_RADIUS_PER_ITEM: RangeInclusive<f64> = 1.5..=3.0;
 }
 
 /// Version of the file format, written as `version = 1` at the top of the
@@ -55,6 +65,7 @@ pub struct Config {
     pub profiles: Vec<Profile>,
     pub animation: Animation,
     pub behavior: Behavior,
+    pub appearance: Appearance,
     pub ring: Ring,
 }
 
@@ -322,4 +333,83 @@ impl Default for Behavior {
             path_tolerance_ms: 50,
         }
     }
+}
+
+/// Colors of the label next to the item under the cursor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LabelStyle {
+    /// Dark text on a light background.
+    #[default]
+    Light,
+    /// Light text on a dark background.
+    Dark,
+}
+
+/// `[appearance]` section: colors, transparency and size of the ring. Like
+/// the animation, it only changes the looks. The defaults are the ring as it
+/// always looked: white items with a black highlight.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Appearance {
+    /// The circles of the ring and the center button.
+    pub item_color: Color,
+    /// The highlight and the blob are always solid; the center button is a
+    /// little fainter than the items.
+    pub item_opacity: f64,
+    /// Icons on the items without the highlight.
+    pub icon_color: Color,
+    /// The item under the cursor, the open folder and the blob.
+    pub highlight_color: Color,
+    pub highlight_icon_color: Color,
+    /// The center button, when releasing there would close the ring.
+    pub cancel_color: Color,
+    /// Item diameter, in pixels at 100% scaling. The center button follows
+    /// it.
+    pub item_size_px: f64,
+    /// Distance from the ring center to the center of each item, in pixels at
+    /// 100% scaling. The folder arc is twice as far.
+    pub ring_radius_px: f64,
+    /// A soft shadow around the items, so they stand out on light windows.
+    pub shadow: bool,
+    pub label: LabelStyle,
+}
+
+impl Appearance {
+    /// The ring radius when the file does not set one: it follows the item
+    /// size, to a tenth of a pixel.
+    pub fn default_ring_radius_px(item_size_px: f64) -> f64 {
+        tenths(item_size_px * RING_RADIUS_PER_ITEM)
+    }
+
+    /// The ring radii allowed with this item size: close enough to reach,
+    /// far enough for the items never to touch.
+    pub fn ring_radius_px_range(item_size_px: f64) -> RangeInclusive<f64> {
+        let (min, max) = limits::RING_RADIUS_PER_ITEM.into_inner();
+        // Rounded inwards to a tenth, so the limits read well in a warning.
+        // The tiny margin keeps 52.3 × 3 (156.899…) at 156.9.
+        let low = (item_size_px * min * 10.0 - 1e-9).ceil() / 10.0;
+        let high = (item_size_px * max * 10.0 + 1e-9).floor() / 10.0;
+        low..=high
+    }
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        Self {
+            item_color: Color::WHITE,
+            item_opacity: 0.96,
+            icon_color: Color::rgb(0x2A, 0x2B, 0x31),
+            highlight_color: Color::rgb(0x12, 0x12, 0x14),
+            highlight_icon_color: Color::WHITE,
+            cancel_color: Color::rgb(0xE6, 0x40, 0x54),
+            item_size_px: ITEM_DIAMETER_PX,
+            ring_radius_px: Self::default_ring_radius_px(ITEM_DIAMETER_PX),
+            shadow: true,
+            label: LabelStyle::Light,
+        }
+    }
+}
+
+fn tenths(v: f64) -> f64 {
+    (v * 10.0).round() / 10.0
 }

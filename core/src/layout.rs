@@ -2,20 +2,30 @@
 //! what is under the cursor.
 //!
 //! Every size derives from `D`, the diameter of one item (52 px at 100%
-//! scaling).
+//! scaling), and from the ring radius (1.8 D unless the appearance says
+//! otherwise).
 
 use std::f64::consts::PI;
 use std::ops::{Add, Mul, Sub};
 
-use crate::ring::{Ring, SLOT_COUNT, Slot};
+use crate::config::Appearance;
+use crate::ring::{FOLDER_MAX_ITEMS, Ring, SLOT_COUNT, Slot};
 use crate::ring_machine::Target;
 use crate::screen::Rect;
 
-/// Item diameter at 100% scaling (96 DPI).
+/// Item diameter at 100% scaling (96 DPI), unless the appearance says
+/// otherwise.
 pub const ITEM_DIAMETER_PX: f64 = 52.0;
+
+/// Ring radius, in item diameters, unless the appearance says otherwise.
+pub const RING_RADIUS_PER_ITEM: f64 = 1.8;
 
 /// Smallest item diameter at 100% scaling, used only on tiny monitors.
 pub const MIN_ITEM_DIAMETER_PX: f64 = 30.0;
+
+/// Smallest gap between two neighbouring items, in item diameters. Closer
+/// than that, their shapes start to melt together and their hit areas touch.
+pub const MIN_ITEM_GAP: f64 = 0.14;
 
 /// A child shows up in the hit-test once it is this far into its appear
 /// animation, so a click never lands on an item that is still too small to see.
@@ -84,7 +94,7 @@ pub struct Geometry {
     pub d: f64,
     /// Item radius.
     pub r: f64,
-    /// Distance from the ring center to each item center: 1.8 D.
+    /// Distance from the ring center to each item center: 1.8 D by default.
     pub ring_r: f64,
     /// Radius of the folder arc: twice the ring radius.
     pub folder_r: f64,
@@ -94,37 +104,53 @@ pub struct Geometry {
     pub cancel_r: f64,
     /// An item reacts a little beyond its edge: 1.12 of its radius.
     pub hit_r: f64,
-    /// Angle between folder children: 22.5°.
+    /// Angle between folder children: 22.5°, or more if that would bring
+    /// them closer than [`MIN_ITEM_GAP`].
     pub child_spacing: f64,
 }
 
 impl Geometry {
+    /// Items `d` wide, with the default ring radius.
     pub fn new(d: f64) -> Self {
+        Self::with_radius(d, RING_RADIUS_PER_ITEM * d)
+    }
+
+    /// Items `d` wide, `ring_r` away from the ring center.
+    pub fn with_radius(d: f64, ring_r: f64) -> Self {
         let r = d / 2.0;
-        let ring_r = 1.8 * d;
+        let folder_r = 2.0 * ring_r;
+        // Distance between the centers of two children `angle` apart is
+        // 2 folder_r sin(angle / 2). Past 40° the 9 children would go round
+        // the whole circle, so the spacing stops there.
+        let closest = (1.0 + MIN_ITEM_GAP) * d / (2.0 * folder_r);
+        let needed = 2.0 * closest.min(1.0).asin();
         Self {
             d,
             r,
             ring_r,
-            folder_r: 2.0 * ring_r,
+            folder_r,
             center_r: 0.35 * d,
             cancel_r: 0.45 * ring_r,
             hit_r: 1.12 * r,
-            child_spacing: PI / 8.0,
+            child_spacing: needed.clamp(PI / 8.0, 2.0 * PI / FOLDER_MAX_ITEMS as f64),
         }
     }
 
-    /// Geometry for a monitor with this scale (1.0 = 100%). The item keeps its
-    /// size unless the monitor is too small for the open folder arc.
-    pub fn for_monitor(scale: f64, monitor: Rect) -> Self {
+    /// Geometry for a monitor with this scale (1.0 = 100%), with the item size
+    /// and ring radius of the appearance. The ring keeps that size unless the
+    /// monitor is too small for the open folder arc; then it shrinks as a
+    /// whole, keeping its proportions.
+    pub fn for_monitor(scale: f64, appearance: &Appearance, monitor: Rect) -> Self {
         let width = f64::from(monitor.right - monitor.left);
         let height = f64::from(monitor.bottom - monitor.top);
-        // The open ring spans about 8.4 D from edge to edge of the folder arc.
-        let fits = (width.min(height) - 24.0 * scale) / 8.4;
-        let d = (ITEM_DIAMETER_PX * scale)
+        let per_item = appearance.ring_radius_px / appearance.item_size_px;
+        // The open ring spans about 4 ring radii and 1.2 D from edge to edge
+        // of the folder arc: 8.4 D with the default radius.
+        let fits = (width.min(height) - 24.0 * scale) / (4.0 * per_item + 1.2);
+        let d = (appearance.item_size_px * scale)
             .min(fits)
             .max(MIN_ITEM_DIAMETER_PX * scale);
-        Self::new(d)
+        Self::with_radius(d, per_item * d)
     }
 
     /// Scale of the extra pixels the layout adds at 100% (6 px around the

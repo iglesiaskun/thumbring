@@ -26,6 +26,7 @@ use windows::Win32::System::Threading::{INFINITE, WaitForSingleObject};
 use windows::core::HSTRING;
 
 use crate::log::{error, info, warning};
+use crate::ring::icons;
 use crate::text;
 use crate::tray::{self, Notice};
 
@@ -70,7 +71,9 @@ fn parse(bytes: &[u8]) -> (Option<Loaded>, Problems) {
         return (None, Problems::Unreadable(reason));
     };
     match Config::from_toml(text) {
-        Ok(loaded) => {
+        Ok(mut loaded) => {
+            // Icon files are told among the other problems of the file.
+            loaded.check_icon_files(|path, _| icons::file(path).map(drop));
             let warnings: Vec<String> = loaded.warnings.iter().map(|w| w.to_string()).collect();
             for warning in &warnings {
                 warning!("settings: {warning}");
@@ -345,5 +348,31 @@ mod tests {
         assert!(matches!(problems, Problems::Unreadable(_)));
 
         assert_eq!(parse(b"").1, Problems::None);
+    }
+
+    #[test]
+    fn a_missing_icon_file_is_a_warning_and_the_item_shows_its_letter() {
+        let (loaded, problems) = parse(
+            br#"
+            [[ring.slots]]
+            type = "action"
+            name = "Star"
+            icon = 'C:\no\such\folder\star.svg'
+            "#,
+        );
+        let Problems::Warnings(warnings) = problems else {
+            panic!("expected a warning, got {problems:?}")
+        };
+        assert_eq!(
+            warnings,
+            [
+                r"ring.slots[0].icon: C:\no\such\folder\star.svg was not found; the item shows the first letter of its name"
+            ]
+        );
+        let config = loaded.expect("loads").config;
+        let thumbring_core::ring::Slot::Action(star) = &config.ring.slots[0] else {
+            panic!("expected an action")
+        };
+        assert_eq!(star.icon, None);
     }
 }

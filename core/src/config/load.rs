@@ -11,12 +11,13 @@ use serde::de::DeserializeOwned;
 use toml::{Table, Value};
 
 use super::{
-    Animation, Apps, Behavior, BlobStyle, Config, FORMAT_VERSION, GestureOverrides, Gestures,
-    MouseButton, OpenWith, Profile, limits,
+    Animation, Appearance, Apps, Behavior, BlobStyle, Config, FORMAT_VERSION, GestureOverrides,
+    Gestures, LabelStyle, MouseButton, OpenWith, Profile, limits,
 };
 use crate::apps::AppName;
+use crate::color::Color;
 use crate::command::Command;
-use crate::ring::{self, Action, FOLDER_MAX_ITEMS, ICONS, Ring, SLOT_COUNT, Slot};
+use crate::ring::{self, Action, FOLDER_MAX_ITEMS, IconFormat, IconSource, Ring, SLOT_COUNT, Slot};
 
 /// Result of loading: an always usable configuration and the warnings about
 /// what was corrected or ignored.
@@ -24,6 +25,47 @@ use crate::ring::{self, Action, FOLDER_MAX_ITEMS, ICONS, Ring, SLOT_COUNT, Slot}
 pub struct Loaded {
     pub config: Config,
     pub warnings: Vec<Warning>,
+}
+
+impl Loaded {
+    /// Checks the icon files of the ring. Reading the text never touches the
+    /// disk, so the engine does this part: `check` gets each path as written
+    /// and says why that file cannot be used. Such an icon is dropped with a
+    /// warning, like an unknown icon name: the item shows the first letter of
+    /// its name.
+    pub fn check_icon_files(
+        &mut self,
+        mut check: impl FnMut(&str, IconFormat) -> Result<(), String>,
+    ) {
+        let mut icons: Vec<(String, &mut Option<String>)> = Vec::new();
+        for (i, slot) in self.config.ring.slots.iter_mut().enumerate() {
+            match slot {
+                Slot::Empty => {}
+                Slot::Action(action) => {
+                    icons.push((format!("ring.slots[{i}].icon"), &mut action.icon))
+                }
+                Slot::Folder { icon, items, .. } => {
+                    icons.push((format!("ring.slots[{i}].icon"), icon));
+                    for (j, action) in items.iter_mut().enumerate() {
+                        icons.push((format!("ring.slots[{i}].items[{j}].icon"), &mut action.icon));
+                    }
+                }
+            }
+        }
+        for (key, icon) in icons {
+            let Some(IconSource::File(path, format)) = icon.as_deref().and_then(IconSource::of)
+            else {
+                continue;
+            };
+            if let Err(reason) = check(path, format) {
+                self.warnings.push(Warning::new(
+                    key,
+                    format!("{reason}; the item shows the first letter of its name"),
+                ));
+                *icon = None;
+            }
+        }
+    }
 }
 
 /// Something in the file that was replaced by its default or ignored.
@@ -93,6 +135,15 @@ impl fmt::Display for OpenWith {
     }
 }
 
+impl fmt::Display for LabelStyle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            LabelStyle::Light => "light",
+            LabelStyle::Dark => "dark",
+        })
+    }
+}
+
 pub(super) fn from_toml(text: &str) -> Result<Loaded, ConfigError> {
     let root: Table = toml::from_str(text).map_err(ConfigError::Syntax)?;
     let mut warnings = Vec::new();
@@ -101,6 +152,7 @@ pub(super) fn from_toml(text: &str) -> Result<Loaded, ConfigError> {
     let version = root.take("version");
     let animation = root.take("animation");
     let behavior = root.take("behavior");
+    let appearance = root.take("appearance");
     let ring = root.take("ring");
     let gestures = root.take("gestures");
     let apps = root.take("apps");
@@ -110,6 +162,7 @@ pub(super) fn from_toml(text: &str) -> Result<Loaded, ConfigError> {
     read_version(version, &mut warnings);
     let animation = read_animation(animation, &mut warnings);
     let behavior = read_behavior(behavior, &mut warnings);
+    let appearance = read_appearance(appearance, &mut warnings);
     let mut ring = read_ring(ring, &mut warnings);
     let mut gestures = read_gestures(gestures, &mut warnings);
     check_buttons(&mut gestures, &mut ring, &mut warnings);
@@ -122,6 +175,7 @@ pub(super) fn from_toml(text: &str) -> Result<Loaded, ConfigError> {
         profiles,
         animation,
         behavior,
+        appearance,
         ring,
     };
     Ok(Loaded { config, warnings })
@@ -319,6 +373,41 @@ fn read_behavior(value: Option<Value>, warnings: &mut Vec<Warning>) -> Behavior 
     };
     s.finish();
     behavior
+}
+
+fn read_appearance(value: Option<Value>, warnings: &mut Vec<Warning>) -> Appearance {
+    let mut s = Section::open("appearance", value, warnings);
+    let d = Appearance::default();
+    let item_color = s.color("item_color", d.item_color);
+    let item_opacity = s.in_range("item_opacity", d.item_opacity, limits::ITEM_OPACITY);
+    let icon_color = s.color("icon_color", d.icon_color);
+    let highlight_color = s.color("highlight_color", d.highlight_color);
+    let highlight_icon_color = s.color("highlight_icon_color", d.highlight_icon_color);
+    let cancel_color = s.color("cancel_color", d.cancel_color);
+    // The item size comes first: the ring radius follows it by default, and
+    // its limits depend on it.
+    let item_size_px = s.in_range("item_size_px", d.item_size_px, limits::ITEM_SIZE_PX);
+    let (min, max) = limits::RING_RADIUS_PER_ITEM.into_inner();
+    let ring_radius_px = s.in_range_because(
+        "ring_radius_px",
+        Appearance::default_ring_radius_px(item_size_px),
+        Appearance::ring_radius_px_range(item_size_px),
+        &format!(" ({min} to {max} times item_size_px, so the items never touch)"),
+    );
+    let appearance = Appearance {
+        item_color,
+        item_opacity,
+        icon_color,
+        highlight_color,
+        highlight_icon_color,
+        cancel_color,
+        item_size_px,
+        ring_radius_px,
+        shadow: s.or_default("shadow", d.shadow),
+        label: s.or_default("label", d.label),
+    };
+    s.finish();
+    appearance
 }
 
 /// One button cannot do two things. While the ring has no items, its button
@@ -591,6 +680,21 @@ impl<'w> Section<'w> {
     where
         T: DeserializeOwned + PartialOrd + fmt::Display,
     {
+        self.in_range_because(key, default, range, "")
+    }
+
+    /// Like [`Self::in_range`], with a note after the range in the warning,
+    /// for a range that depends on another value.
+    fn in_range_because<T>(
+        &mut self,
+        key: &str,
+        default: T,
+        range: RangeInclusive<T>,
+        note: &str,
+    ) -> T
+    where
+        T: DeserializeOwned + PartialOrd + fmt::Display,
+    {
         match self.field(key) {
             Field::Missing => default,
             // NaN is never inside a range, so it falls back to the default too.
@@ -600,7 +704,7 @@ impl<'w> Section<'w> {
                 self.warn(
                     key,
                     format!(
-                        "{v} is outside the range from {min} to {max}; using the default {default}"
+                        "{v} is outside the range from {min} to {max}{note}; using the default {default}"
                     ),
                 );
                 default
@@ -716,18 +820,44 @@ impl<'w> Section<'w> {
         }
     }
 
-    /// Optional icon name. An unknown one is dropped with a warning: the item
-    /// then shows the first letter of its name.
+    /// Optional icon: a built-in name or the path of an `.svg` or `.png`
+    /// file. Anything else is dropped with a warning: the item then shows the
+    /// first letter of its name. Whether the file opens is checked apart, in
+    /// [`Loaded::check_icon_files`].
     fn icon(&mut self, key: &str) -> Option<String> {
         let name = self.text(key)?;
-        if ICONS.contains(&name.as_str()) {
+        if IconSource::of(&name).is_some() {
             return Some(name);
         }
         self.warn(
             key,
-            format!("unknown icon \"{name}\"; the item shows the first letter of its name"),
+            format!(
+                "unknown icon \"{name}\" (use a built-in icon name or the full path of a .svg or \
+                 .png file); the item shows the first letter of its name"
+            ),
         );
         None
+    }
+
+    /// A color written as `"#RRGGBB"`.
+    fn color(&mut self, key: &str, default: Color) -> Color {
+        match self.field::<String>(key) {
+            Field::Missing => default,
+            Field::Valid(text) => match text.parse() {
+                Ok(color) => color,
+                Err(e) => {
+                    self.warn(key, format!("\"{text}\": {e}; using the default {default}"));
+                    default
+                }
+            },
+            Field::Invalid(raw) => {
+                self.warn(
+                    key,
+                    format!("expected a color as text, like \"#2F5BD3\", got {raw}; using the default {default}"),
+                );
+                default
+            }
+        }
     }
 
     fn array(&mut self, key: &str) -> Vec<Value> {

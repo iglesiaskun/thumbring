@@ -1,5 +1,5 @@
 pub mod controller;
-mod icons;
+pub mod icons;
 pub mod overlay;
 mod png;
 pub mod preview;

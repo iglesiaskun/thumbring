@@ -67,11 +67,14 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    // Development aid: shows the sample ring with a fixed script and exits.
-    // `--preview-ring [ms] [--save file.png]`: a number of milliseconds freezes
-    // the script at that moment; `--save` writes that frame to a PNG instead.
+    // Development aid: shows the ring of the settings file with a fixed script
+    // and exits. `--preview-ring [ms] [--save file.png] [--dir folder]`: a
+    // number of milliseconds freezes the script at that moment; `--save`
+    // writes that frame to a PNG instead; `--dir` is the settings folder.
     if args.first().is_some_and(|a| a == "--preview-ring") {
-        let freeze_at = match args.get(1) {
+        let usage = "usage: --preview-ring [ms] [--save file.png] [--dir folder]";
+        let mut rest = args[1..].iter().peekable();
+        let freeze_at = match rest.next_if(|a| !a.to_string_lossy().starts_with("--")) {
             Some(ms) => Some(
                 ms.to_string_lossy()
                     .parse::<f64>()
@@ -79,13 +82,26 @@ fn run() -> Result<(), Box<dyn Error>> {
             ),
             None => None,
         };
-        let save = match (args.get(2), args.get(3)) {
-            (Some(flag), Some(path)) if flag == "--save" => Some(std::path::PathBuf::from(path)),
-            (None, None) => None,
-            _ => return Err("usage: --preview-ring [ms] [--save file.png]".into()),
-        };
+        let mut save = None;
+        let mut dir = Vec::new();
+        while let Some(flag) = rest.next() {
+            let value = rest.next().ok_or(usage)?;
+            if flag == "--save" && freeze_at.is_some() {
+                save = Some(std::path::PathBuf::from(value));
+            } else if flag == "--dir" {
+                dir = vec![flag.clone(), value.clone()];
+            } else {
+                return Err(usage.into());
+            }
+        }
         let _ = dpi::enable_per_monitor_awareness();
-        return ring::preview::run(freeze_at, save.as_deref());
+        // The file as it is, or the defaults; the preview never creates it.
+        let config = watcher::read(&Paths::from_args(dir)?.config_file)
+            .ok()
+            .and_then(|read| read.loaded)
+            .map(|loaded| loaded.config)
+            .unwrap_or_default();
+        return ring::preview::run(freeze_at, save.as_deref(), &config);
     }
     let paths = Paths::from_args(args)?;
     let Some(_instance) = instance::acquire()? else {

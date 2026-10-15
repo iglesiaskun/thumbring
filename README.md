@@ -165,9 +165,41 @@ Icons: `calculator`, `calendar`, `clipboard`, `clipboard-list`,
 `clipboard-paste`, `code`, `copy`, `folder-open`, `globe`, `headphones`,
 `layout-grid`, `lock`, `mail`, `music`, `play`, `redo-2`, `scan`, `scissors`,
 `settings`, `skip-back`, `skip-forward`, `smile`, `sticky-note`, `terminal`,
-`undo-2`, `volume-1`, `volume-2`, `volume-x` and `x`. Without an icon (or with
-an unknown one, which logs a warning), the item shows the first letter of its
-name.
+`undo-2`, `volume-1`, `volume-2`, `volume-x` and `x`. An icon can also be an
+SVG or PNG file of your own, by its full path, such as
+`icon = 'C:\Users\you\Pictures\star.svg'` (`%VARIABLES%` work, and files go up
+to 2 MB). An SVG takes the icon colors wherever it uses `currentColor` or sets
+no color; its other colors stay, and a PNG keeps its own. Thumbring reads the
+file when the settings load, so after changing the picture, save the settings
+again. Without an icon, or with an unknown one or a file that cannot be read
+(which logs a warning), the item shows the first letter of its name.
+
+The optional `[appearance]` section changes the colors, the transparency and
+the size of the ring. Without it, the ring looks as it always did: the values
+below are the defaults. Colors are written as `"#RRGGBB"`.
+
+```toml
+[appearance]
+item_color = "#FFFFFF"            # the items and the center button
+item_opacity = 0.96               # 0.3 to 1; the highlight is always solid
+icon_color = "#2A2B31"
+highlight_color = "#121214"       # item under the cursor, open folder, blob
+highlight_icon_color = "#FFFFFF"
+cancel_color = "#E64054"          # center button when releasing there closes
+item_size_px = 52                 # item diameter at 100% scaling, 32 to 96
+ring_radius_px = 93.6             # distance from the center to each item
+shadow = true                     # soft shadow around the items
+label = "light"                   # "light" or "dark"
+```
+
+`ring_radius_px` goes from 1.5 to 3 times `item_size_px`, so the items never
+touch; without it, it is 1.8 times `item_size_px`. Folders open twice as far
+from the center, and the center button follows the item size. The sizes are
+at 100% scaling and grow with the monitor scale; on a monitor too small for
+an open folder, the ring shrinks as a whole. For dark items, try
+`item_color = "#1F2026"`, `icon_color = "#E8E9EE"`,
+`highlight_color = "#FFFFFF"`, `highlight_icon_color = "#16171B"` and
+`label = "dark"`.
 
 ```toml
 [animation]

@@ -27,6 +27,15 @@ changed.
   the defaults, so older settings files work as before. A quick tap, and the
   `"native"` command in a gesture or a ring action, send the click of the
   button that was held.
+- Change how the ring looks with the new, optional `[appearance]` section of
+  the settings file: the colors of the items, icons, highlight and cancel
+  button, the opacity of the items, the soft shadow, a light or dark label,
+  the size of the items (`item_size_px`) and their distance from the center
+  (`ring_radius_px`). Without the section, the ring looks as before.
+- Ring items can show an SVG or PNG file of your own as their icon: `icon`
+  also takes the full path of the file. An SVG follows the icon colors where
+  it uses `currentColor`. A file that is missing or cannot be read logs a
+  warning, and the item shows the first letter of its name.
 
 ### Changed
 

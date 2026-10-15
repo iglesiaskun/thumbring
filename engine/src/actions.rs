@@ -168,7 +168,7 @@ fn open_through_explorer(file: &str, args: Option<&str>) -> windows::core::Resul
 }
 
 /// Replaces `%VARIABLE%` with its value.
-fn expand(text: &str) -> String {
+pub fn expand(text: &str) -> String {
     let source = HSTRING::from(text);
     // SAFETY: first asks for the size, then writes into a buffer of that size.
     unsafe {

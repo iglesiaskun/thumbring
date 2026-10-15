@@ -1,8 +1,10 @@
 //! Draws a ring [`Scene`] on a transparent window.
 //!
-//! - Direct3D 11 draws the shapes with the SDF shader (`ring.hlsl`): white
-//!   items, dark highlights, the blob and the center button.
-//! - Direct2D draws the icons (Lucide SVGs) and the label on top.
+//! - Direct3D 11 draws the shapes with the SDF shader (`ring.hlsl`): the
+//!   items, the highlights, the blob and the center button, in the colors of
+//!   the appearance.
+//! - Direct2D draws the icons (Lucide SVGs, or SVG and PNG files of the
+//!   user's own) and the label on top. PNG files are decoded with WIC.
 //! - DirectComposition puts the result on the screen with per-pixel
 //!   transparency, without a redirection bitmap.
 //!
@@ -10,27 +12,31 @@
 //! messages and timers) before drawing each frame, so presenting never blocks
 //! the thread and one frame at most is in flight.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::mem::ManuallyDrop;
+use std::path::Path;
 
 use thumbring_core::anim::{Blob, Circle};
-use thumbring_core::layout::Vec2;
-use thumbring_core::ring::{Ring, Slot};
+use thumbring_core::color::Color;
+use thumbring_core::config::{Appearance, LabelStyle};
+use thumbring_core::layout::{ITEM_DIAMETER_PX, Vec2};
+use thumbring_core::ring::{IconFormat, IconSource, Ring, Slot};
 use thumbring_core::ring_machine::Target;
 use thumbring_core::screen::Rect;
 use thumbring_core::view::{
     IconDraw, IconKey, ItemKey, LabelDraw, MAX_DARK, MAX_WHITE, Scene, label_position,
 };
-use windows::Win32::Foundation::{CloseHandle, HANDLE, HMODULE, HWND};
+use windows::Win32::Foundation::{CloseHandle, E_INVALIDARG, GENERIC_READ, HANDLE, HMODULE, HWND};
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D_RECT_F, D2D_SIZE_F, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET,
     D2D1_BITMAP_PROPERTIES1, D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_DRAW_TEXT_OPTIONS_NONE,
-    D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_LAYER_OPTIONS1_NONE, D2D1_LAYER_PARAMETERS1,
-    D2D1_ROUNDED_RECT, D2D1CreateFactory, ID2D1DeviceContext5, ID2D1Factory1, ID2D1SolidColorBrush,
-    ID2D1SvgDocument, ID2D1SvgGlyphStyle,
+    D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_INTERPOLATION_MODE_LINEAR, D2D1_LAYER_OPTIONS1_NONE,
+    D2D1_LAYER_PARAMETERS1, D2D1_ROUNDED_RECT, D2D1CreateFactory, ID2D1Bitmap, ID2D1DeviceContext5,
+    ID2D1Factory1, ID2D1SolidColorBrush, ID2D1SvgDocument, ID2D1SvgGlyphStyle,
 };
 use windows::Win32::Graphics::Direct3D::Fxc::{D3DCOMPILE_OPTIMIZATION_LEVEL3, D3DCompile};
 use windows::Win32::Graphics::Direct3D::{
@@ -63,12 +69,22 @@ use windows::Win32::Graphics::Dxgi::{
     DXGI_USAGE_RENDER_TARGET_OUTPUT, IDXGIDevice, IDXGIFactory2, IDXGISurface, IDXGISwapChain1,
     IDXGISwapChain2,
 };
+use windows::Win32::Graphics::Imaging::{
+    CLSID_WICImagingFactory, GUID_WICPixelFormat32bppPBGRA, IWICImagingFactory,
+    WICBitmapDitherTypeNone, WICBitmapInterpolationModeFant, WICBitmapPaletteTypeCustom,
+    WICDecodeMetadataCacheOnDemand,
+};
+use windows::Win32::System::Com::{
+    CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE, CoCreateInstance,
+    CoInitializeEx, CoUninitialize,
+};
 use windows::Win32::System::Threading::WaitForSingleObjectEx;
 use windows::Win32::UI::Shell::SHCreateMemStream;
 use windows::core::{HSTRING, Interface, PCSTR, s};
 use windows_numerics::{Matrix3x2, Vector2};
 
 use super::icons;
+use crate::log::warning;
 
 const SHADER: &str = include_str!("ring.hlsl");
 
@@ -79,8 +95,14 @@ const SWAP_CHAIN_FLAGS: DXGI_SWAP_CHAIN_FLAG = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENC
 const ITEM_ICON: (f64, f32) = (0.40, 1.9);
 /// The × in the center is smaller and bolder.
 const CENTER_ICON: (f64, f32) = (0.26, 2.4);
-const INK: &str = "#2A2B31";
-const INK_ON: &str = "#FFFFFF";
+/// Text size of the first letter that stands in for a missing icon: 15 px
+/// on a 52 px item.
+const LETTER: f64 = 15.0 / ITEM_DIAMETER_PX;
+/// Strength of the soft shadow around the items, when it is on.
+const SHADOW: f32 = 0.10;
+/// PNG files wider or taller than this are refused: decoding one takes
+/// memory and time, and an icon is drawn at a few dozen pixels.
+const MAX_PNG_SIDE: u32 = 2048;
 /// Plain text: no SVG glyph style for color fonts.
 const NO_GLYPH_STYLE: Option<&ID2D1SvgGlyphStyle> = None;
 
@@ -96,6 +118,8 @@ struct Constants {
     hero: [f32; 4],
     hero_shape: [f32; 4],
     dark_color: [f32; 4],
+    item_color: [f32; 4],
+    cancel_color: [f32; 4],
     params: [f32; 4],
     params2: [f32; 4],
     bounds: [f32; 4],
@@ -108,12 +132,10 @@ pub struct LabelText {
     pub detail: Option<String>,
 }
 
-/// Text formats, in pixels for the monitor scale.
+/// Text formats of the label, in pixels for the monitor scale.
 struct Fonts {
     name: IDWriteTextFormat,
     detail: IDWriteTextFormat,
-    /// The first letter of an item without an icon.
-    letter: IDWriteTextFormat,
 }
 
 impl Fonts {
@@ -122,7 +144,6 @@ impl Fonts {
         Ok(Self {
             name: text_format(dwrite, "Segoe UI", DWRITE_FONT_WEIGHT_MEDIUM, px(13.0))?,
             detail: text_format(dwrite, "Consolas", DWRITE_FONT_WEIGHT_NORMAL, px(11.0))?,
-            letter: text_format(dwrite, "Segoe UI", DWRITE_FONT_WEIGHT_SEMI_BOLD, px(15.0))?,
         })
     }
 }
@@ -134,6 +155,46 @@ struct Brushes {
     detail: ID2D1SolidColorBrush,
     ink: ID2D1SolidColorBrush,
     ink_on: ID2D1SolidColorBrush,
+}
+
+impl Brushes {
+    fn new(d2d: &ID2D1DeviceContext5, look: &Appearance) -> windows::core::Result<Self> {
+        let brush = |[r, g, b]: [f32; 3], a: f32| {
+            // SAFETY: a plain factory call on the device context.
+            unsafe { d2d.CreateSolidColorBrush(&D2D1_COLOR_F { r, g, b, a }, None) }
+        };
+        let hex = |r, g, b| Color::rgb(r, g, b).to_f32();
+        let (pill, name, detail) = match look.label {
+            LabelStyle::Light => (
+                Color::WHITE.to_f32(),
+                hex(0x24, 0x25, 0x2B),
+                hex(0x6A, 0x6E, 0x79),
+            ),
+            LabelStyle::Dark => (
+                hex(0x18, 0x19, 0x1E),
+                hex(0xF1, 0xF2, 0xF5),
+                hex(0xA6, 0xAA, 0xB6),
+            ),
+        };
+        Ok(Self {
+            pill: brush(pill, 0.92)?,
+            shadow: brush([0.0; 3], 0.035)?,
+            name: brush(name, 1.0)?,
+            detail: brush(detail, 1.0)?,
+            ink: brush(look.icon_color.to_f32(), 1.0)?,
+            ink_on: brush(look.highlight_icon_color.to_f32(), 1.0)?,
+        })
+    }
+}
+
+/// What an icon is drawn with.
+#[derive(Clone)]
+enum Picture {
+    Svg(ID2D1SvgDocument),
+    /// A PNG, already scaled, and where it goes in the icon square.
+    Bitmap(ID2D1Bitmap, D2D_RECT_F),
+    /// No picture: the first letter of the item name.
+    Letter,
 }
 
 pub struct Renderer {
@@ -155,9 +216,15 @@ pub struct Renderer {
     d2d: ID2D1DeviceContext5,
     dwrite: IDWriteFactory,
     fonts: Fonts,
+    /// The first letter of an item without an icon, for an item diameter
+    /// (in its bits): it grows with the item.
+    letter: Option<(u64, IDWriteTextFormat)>,
+    appearance: Appearance,
     brushes: Brushes,
-    /// SVG documents by (icon name, drawn white, is the center, size bits).
-    svgs: HashMap<(String, bool, bool, u32), Option<ID2D1SvgDocument>>,
+    /// Icons by (icon, drawn on the highlight, is the center, size bits).
+    pictures: HashMap<(String, bool, bool, u32), Picture>,
+    /// Icon files that could not be drawn, already told in the log.
+    broken: HashSet<String>,
 }
 
 impl Renderer {
@@ -210,32 +277,8 @@ impl Renderer {
                 .cast()?;
             let dwrite: IDWriteFactory = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)?;
             let fonts = Fonts::new(&dwrite, scale)?;
-            let brush = |r: f32, g: f32, b: f32, a: f32| {
-                d2d.CreateSolidColorBrush(&D2D1_COLOR_F { r, g, b, a }, None)
-            };
-            let brushes = Brushes {
-                pill: brush(1.0, 1.0, 1.0, 0.92)?,
-                shadow: brush(0.0, 0.0, 0.0, 0.035)?,
-                name: brush(
-                    0x24 as f32 / 255.0,
-                    0x25 as f32 / 255.0,
-                    0x2B as f32 / 255.0,
-                    1.0,
-                )?,
-                detail: brush(
-                    0x6A as f32 / 255.0,
-                    0x6E as f32 / 255.0,
-                    0x79 as f32 / 255.0,
-                    1.0,
-                )?,
-                ink: brush(
-                    0x2A as f32 / 255.0,
-                    0x2B as f32 / 255.0,
-                    0x31 as f32 / 255.0,
-                    1.0,
-                )?,
-                ink_on: brush(1.0, 1.0, 1.0, 1.0)?,
-            };
+            let appearance = Appearance::default();
+            let brushes = Brushes::new(&d2d, &appearance)?;
 
             Ok(Self {
                 width,
@@ -253,10 +296,23 @@ impl Renderer {
                 d2d,
                 dwrite,
                 fonts,
+                letter: None,
+                appearance,
                 brushes,
-                svgs: HashMap::new(),
+                pictures: HashMap::new(),
+                broken: HashSet::new(),
             })
         }
+    }
+
+    /// Takes the appearance of new settings. Every icon is made again, so
+    /// the icon files are read again too.
+    pub fn set_appearance(&mut self, appearance: &Appearance) -> windows::core::Result<()> {
+        self.brushes = Brushes::new(&self.d2d, appearance)?;
+        self.appearance = appearance.clone();
+        self.pictures.clear();
+        self.broken.clear();
+        Ok(())
     }
 
     /// Changes the window size and the monitor scale, when the window moves
@@ -282,7 +338,7 @@ impl Renderer {
         if scale != self.scale {
             self.fonts = Fonts::new(&self.dwrite, scale)?;
             // Icon sizes follow the item size, which follows the scale.
-            self.svgs.clear();
+            self.pictures.clear();
             self.scale = scale;
         }
         Ok(())
@@ -362,7 +418,7 @@ impl Renderer {
             center_red: 0.0,
             k_white: 0.22 * r,
             k_dark: 0.22 * r,
-            dark_color: [0.07, 0.07, 0.08],
+            highlight_fade: 0.0,
             icons,
             label: runnable.map(|target| LabelDraw {
                 target,
@@ -501,8 +557,14 @@ impl Renderer {
         }
     }
 
-    /// Fills the shader constants from the scene.
+    /// Fills the shader constants from the scene and the appearance.
     unsafe fn upload(&self, scene: &Scene) -> windows::core::Result<()> {
+        let look = &self.appearance;
+        let item = look.item_color.to_f32();
+        let fade = scene.highlight_fade as f32;
+        let dark = look.highlight_color.to_f32();
+        let dark = [0, 1, 2].map(|i| dark[i] + (item[i] - dark[i]) * fade);
+        let cancel = look.cancel_color.to_f32();
         let mut c = Constants {
             white: [[0.0; 4]; MAX_WHITE],
             dark: [[0.0; 4]; MAX_DARK],
@@ -516,19 +578,21 @@ impl Renderer {
             blob_shape: [1.0, 0.0, 1.0, 1.0],
             hero: [0.0; 4],
             hero_shape: [1.0, 0.0, 1.0, 1.0],
-            dark_color: [
-                scene.dark_color[0],
-                scene.dark_color[1],
-                scene.dark_color[2],
-                scene.alpha as f32,
-            ],
+            dark_color: [dark[0], dark[1], dark[2], scene.alpha as f32],
+            item_color: [item[0], item[1], item[2], look.item_opacity as f32],
+            cancel_color: [cancel[0], cancel[1], cancel[2], 0.0],
             params: [
                 scene.k_white as f32,
                 scene.k_dark as f32,
                 scene.white.len().min(MAX_WHITE) as f32,
                 scene.dark.len().min(MAX_DARK) as f32,
             ],
-            params2: [(14.0 * self.scale) as f32, 0.0, 0.0, 0.0],
+            params2: [
+                (14.0 * self.scale) as f32,
+                if look.shadow { SHADOW } else { 0.0 },
+                0.0,
+                0.0,
+            ],
             bounds: [0.0; 4],
             viewport: [self.width as f32, self.height as f32, 0.0, 0.0],
         };
@@ -620,6 +684,7 @@ impl Renderer {
         let half = (size / 2.0) as f32 * s;
         // SAFETY: Direct2D calls between BeginDraw and EndDraw.
         unsafe {
+            let picture = self.picture(&name, icon.on, is_center, size, stroke)?;
             let layer = icon.opacity < 0.999;
             if layer {
                 self.push_opacity(icon.opacity as f32)?;
@@ -632,9 +697,17 @@ impl Renderer {
                 M31: icon.center.x as f32 - half,
                 M32: icon.center.y as f32 - half,
             });
-            match self.svg(&name, icon.on, is_center, size, stroke)? {
-                Some(document) => self.d2d.DrawSvgDocument(&document),
-                None => self.draw_letter(&glyph, icon.on, size as f32)?,
+            match picture {
+                Picture::Svg(document) => self.d2d.DrawSvgDocument(&document),
+                Picture::Bitmap(bitmap, place) => self.d2d.DrawBitmap(
+                    &bitmap,
+                    Some(&place),
+                    1.0,
+                    D2D1_INTERPOLATION_MODE_LINEAR,
+                    None,
+                    None,
+                ),
+                Picture::Letter => self.draw_letter(&glyph, icon.on, size as f32, item_d)?,
             }
             self.d2d.SetTransform(&Matrix3x2::identity());
             if layer {
@@ -644,41 +717,188 @@ impl Renderer {
         Ok(())
     }
 
-    /// The SVG document of an icon, created once per color and size.
-    unsafe fn svg(
+    /// What an icon is drawn with, made once per color and size. A file
+    /// that cannot be drawn gives the first letter, and a line in the log.
+    unsafe fn picture(
         &mut self,
         name: &str,
         on: bool,
         is_center: bool,
         size: f64,
         stroke: f32,
-    ) -> windows::core::Result<Option<ID2D1SvgDocument>> {
+    ) -> windows::core::Result<Picture> {
         let key = (name.to_owned(), on, is_center, (size as f32).to_bits());
-        if let Some(cached) = self.svgs.get(&key) {
+        if let Some(cached) = self.pictures.get(&key) {
             return Ok(cached.clone());
         }
-        let color = if on { INK_ON } else { INK };
-        let document = match icons::svg(name, color, stroke, size as f32) {
-            // SAFETY: the stream copies the bytes; the viewport is the icon size.
-            Some(text) => unsafe {
-                let stream = SHCreateMemStream(Some(text.as_bytes()));
-                let viewport = D2D_SIZE_F {
-                    width: size as f32,
-                    height: size as f32,
-                };
-                Some(self.d2d.CreateSvgDocument(stream.as_ref(), viewport)?)
-            },
-            None => None,
+        let look = &self.appearance;
+        let color = if on {
+            look.highlight_icon_color
+        } else {
+            look.icon_color
+        }
+        .to_string();
+        let picture = match IconSource::of(name) {
+            // SAFETY: Direct2D calls on the device context of the renderer.
+            Some(IconSource::Builtin(name)) => {
+                match icons::svg(name, &color, stroke, size as f32) {
+                    Some(text) => Picture::Svg(unsafe { self.svg_document(&text, size)? }),
+                    None => Picture::Letter,
+                }
+            }
+            // SAFETY: as above, plus WIC for PNG files.
+            Some(IconSource::File(path, format)) => {
+                match unsafe { self.icon_file(path, format, &color, size) } {
+                    Ok(picture) => picture,
+                    Err(reason) => {
+                        if self.broken.insert(path.to_owned()) {
+                            warning!(
+                                "ring: the icon {path} cannot be drawn ({reason}); the item shows \
+                                 the first letter of its name"
+                            );
+                        }
+                        Picture::Letter
+                    }
+                }
+            }
+            None => Picture::Letter,
         };
-        self.svgs.insert(key, document.clone());
-        Ok(document)
+        self.pictures.insert(key, picture.clone());
+        Ok(picture)
+    }
+
+    unsafe fn svg_document(
+        &self,
+        text: &str,
+        size: f64,
+    ) -> windows::core::Result<ID2D1SvgDocument> {
+        // SAFETY: the stream copies the bytes; the viewport is the icon size.
+        unsafe {
+            let stream = SHCreateMemStream(Some(text.as_bytes()));
+            let viewport = D2D_SIZE_F {
+                width: size as f32,
+                height: size as f32,
+            };
+            self.d2d.CreateSvgDocument(stream.as_ref(), viewport)
+        }
+    }
+
+    /// The picture of an icon file of the user's own, `size` pixels wide.
+    unsafe fn icon_file(
+        &self,
+        path: &str,
+        format: IconFormat,
+        color: &str,
+        size: f64,
+    ) -> Result<Picture, String> {
+        // Checked again: the file may have changed since the settings loaded.
+        let file = icons::file(path)?;
+        let shown = file.display();
+        match format {
+            IconFormat::Svg => {
+                let source = fs::read_to_string(&file)
+                    .map_err(|e| format!("could not read {shown}: {e}"))?;
+                let text = icons::user_svg(&source, color, size as f32)
+                    .ok_or_else(|| format!("{shown} has no <svg> element"))?;
+                // SAFETY: a Direct2D call on the device context.
+                unsafe { self.svg_document(&text, size) }
+                    .map(Picture::Svg)
+                    .map_err(|e| format!("Direct2D could not read {shown} as SVG: {}", e.message()))
+            }
+            // SAFETY: WIC and Direct2D calls, with COM initialized around them.
+            IconFormat::Png => unsafe { self.png(&file, size) }
+                .map_err(|e| format!("could not read {shown} as PNG: {}", e.message())),
+        }
+    }
+
+    /// A PNG file scaled to fit a `size` square, keeping its proportions.
+    unsafe fn png(&self, file: &Path, size: f64) -> windows::core::Result<Picture> {
+        // WIC needs COM on this thread.
+        // SAFETY: initialized and uninitialized on this same thread; every
+        // WIC object is released before the end of `decode`.
+        unsafe {
+            let com = CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+            let picture = self.decode_png(file, size);
+            if com.is_ok() {
+                CoUninitialize();
+            }
+            picture
+        }
+    }
+
+    unsafe fn decode_png(&self, file: &Path, size: f64) -> windows::core::Result<Picture> {
+        // SAFETY: WIC and Direct2D calls on objects created here; the out
+        // pointers are locals.
+        unsafe {
+            let wic: IWICImagingFactory =
+                CoCreateInstance(&CLSID_WICImagingFactory, None, CLSCTX_INPROC_SERVER)?;
+            let decoder = wic.CreateDecoderFromFilename(
+                &HSTRING::from(file.as_os_str()),
+                None,
+                GENERIC_READ,
+                WICDecodeMetadataCacheOnDemand,
+            )?;
+            let frame = decoder.GetFrame(0)?;
+            let (mut width, mut height) = (0, 0);
+            frame.GetSize(&mut width, &mut height)?;
+            if width == 0 || height == 0 || width.max(height) > MAX_PNG_SIDE {
+                return Err(windows::core::Error::new(
+                    E_INVALIDARG,
+                    format!(
+                        "it is {width} × {height} pixels; icons go up to {MAX_PNG_SIDE} × {MAX_PNG_SIDE}"
+                    ),
+                ));
+            }
+            // Premultiplied first, so scaling does not bleed the color of
+            // transparent pixels into the edges.
+            let premultiplied = wic.CreateFormatConverter()?;
+            premultiplied.Initialize(
+                &frame,
+                &GUID_WICPixelFormat32bppPBGRA,
+                WICBitmapDitherTypeNone,
+                None,
+                0.0,
+                WICBitmapPaletteTypeCustom,
+            )?;
+            let fit = size / f64::from(width.max(height));
+            let scaled_size = |v: u32| ((f64::from(v) * fit).round() as u32).max(1);
+            let (w, h) = (scaled_size(width), scaled_size(height));
+            let scaler = wic.CreateBitmapScaler()?;
+            scaler.Initialize(&premultiplied, w, h, WICBitmapInterpolationModeFant)?;
+            let bitmap = self.d2d.CreateBitmapFromWicBitmap(&scaler, None)?;
+            let left = ((size - f64::from(w)) / 2.0) as f32;
+            let top = ((size - f64::from(h)) / 2.0) as f32;
+            let place = D2D_RECT_F {
+                left,
+                top,
+                right: left + w as f32,
+                bottom: top + h as f32,
+            };
+            Ok(Picture::Bitmap(bitmap.cast()?, place))
+        }
     }
 
     /// First letter of the item name, when it has no icon.
-    unsafe fn draw_letter(&self, letter: &str, on: bool, size: f32) -> windows::core::Result<()> {
+    unsafe fn draw_letter(
+        &mut self,
+        letter: &str,
+        on: bool,
+        size: f32,
+        item_d: f64,
+    ) -> windows::core::Result<()> {
+        let format = match &self.letter {
+            Some((bits, format)) if *bits == item_d.to_bits() => format.clone(),
+            _ => {
+                let px = (LETTER * item_d) as f32;
+                let format =
+                    text_format(&self.dwrite, "Segoe UI", DWRITE_FONT_WEIGHT_SEMI_BOLD, px)?;
+                self.letter = Some((item_d.to_bits(), format.clone()));
+                format
+            }
+        };
         // SAFETY: Direct2D and DirectWrite calls between BeginDraw and EndDraw.
         unsafe {
-            let layout = self.layout(letter, &self.fonts.letter)?;
+            let layout = self.layout(letter, &format)?;
             let metrics = metrics(&layout)?;
             let brush = if on {
                 &self.brushes.ink_on
@@ -1022,8 +1242,8 @@ mod tests {
 
     #[test]
     fn constants_match_the_shader_layout() {
-        // 32 + 24 circles and 10 vectors of 4 floats each.
-        assert_eq!(size_of::<Constants>(), (32 + 24 + 10) * 16);
+        // 32 + 24 circles and 12 vectors of 4 floats each.
+        assert_eq!(size_of::<Constants>(), (32 + 24 + 12) * 16);
         assert_eq!(size_of::<Constants>() % 16, 0);
     }
 }

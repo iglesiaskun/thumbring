@@ -49,12 +49,48 @@ pub const ICONS: [&str; 29] = [
     "x",
 ];
 
+/// What the `icon` of an item names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconSource<'a> {
+    /// One of [`ICONS`], embedded in the engine.
+    Builtin(&'a str),
+    /// The path of a picture of the user's own, as written in the settings
+    /// (it may hold `%VARIABLES%`).
+    File(&'a str, IconFormat),
+}
+
+/// The pictures an icon file can hold, told by the file extension.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconFormat {
+    Svg,
+    Png,
+}
+
+impl<'a> IconSource<'a> {
+    /// What `icon` names: a built-in icon or an `.svg` or `.png` file (in
+    /// any case). `None` for anything else.
+    pub fn of(icon: &'a str) -> Option<Self> {
+        if ICONS.contains(&icon) {
+            return Some(Self::Builtin(icon));
+        }
+        let (stem, extension) = icon.rsplit_once('.')?;
+        let format = match extension.to_ascii_lowercase().as_str() {
+            "svg" => IconFormat::Svg,
+            "png" => IconFormat::Png,
+            _ => return None,
+        };
+        // ".svg" alone, or a folder named that way, is not a file name.
+        let named = !stem.is_empty() && !stem.ends_with(['\\', '/']);
+        named.then_some(Self::File(icon, format))
+    }
+}
+
 /// An action the ring can run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Action {
     /// Label shown next to the item.
     pub name: String,
-    /// Icon name.
+    /// A built-in icon name or the path of an icon file; see [`IconSource`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
     /// What the action does. Without a command, the item shows up but does

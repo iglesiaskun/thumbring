@@ -313,13 +313,15 @@ fn an_empty_folder_opens_without_a_blob() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn closing_turns_the_dark_layer_grey_and_ends_in_170_ms() {
+fn closing_fades_the_highlight_halfway_and_ends_in_170_ms() {
     let mut e = Engine::opened();
     e.point(Target::Action { slot: 0 }, 200.0);
+    assert_eq!(e.scene(400.0).unwrap().highlight_fade, 0.0);
     let effects = e.send(Event::Click(Target::Action { slot: 0 }), 500.0);
     assert!(effects.contains(&Effect::Execute(Target::Action { slot: 0 })));
     let s = e.scene(520.0).unwrap();
-    assert_eq!(s.dark_color, [0.56, 0.56, 0.6]);
+    // Halfway from the highlight color to the item color.
+    assert_eq!(s.highlight_fade, 0.5);
     // The action that ran keeps its disc while the ring closes.
     assert_eq!(s.dark.len(), 1);
     assert!(s.active);

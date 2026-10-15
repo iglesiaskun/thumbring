@@ -15,9 +15,11 @@
 //! - [`apps`]: per-app profiles, exclusion list and when gestures are on.
 //! - [`screen`]: rule that tells whether the focused window is fullscreen.
 //! - [`config`]: TOML configuration file, with lenient validation.
+//! - [`color`]: the `"#RRGGBB"` colors of the ring appearance.
 
 pub mod anim;
 pub mod apps;
+pub mod color;
 pub mod command;
 pub mod config;
 pub mod gesture;
