@@ -9,11 +9,12 @@ import * as ring from './js/pages/ring.js';
 import * as gestures from './js/pages/gestures.js';
 import * as apps from './js/pages/apps.js';
 import * as behavior from './js/pages/behavior.js';
+import * as animation from './js/pages/animation.js';
 
 // Each page: id, title, icon, icons (the ones it draws), mount(root) once,
 // render(root) after every change and shown(root) when it comes on screen.
 // A page may also list problems() to fix before saving, and reveal(problem).
-const PAGES = [ring, gestures, apps, behavior];
+const PAGES = [ring, gestures, apps, behavior, animation];
 const ICONS = ['circle-alert', 'undo-2', 'redo-2', ...PAGES.flatMap(p => [p.icon, ...(p.icons ?? [])])];
 
 let page = PAGES[0];

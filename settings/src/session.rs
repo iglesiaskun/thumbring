@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use serde_json::{Value as Json, json};
-use thumbring_core::config::{Config, DEFAULT_FILE};
+use thumbring_core::config::{BlobStyle, Config, DEFAULT_FILE};
 use toml_edit::DocumentMut;
 
 use crate::{edit, file};
@@ -35,6 +35,8 @@ pub struct Snapshot {
     pub defaults: Json,
     /// Allowed range of each number, by key path: `"behavior.hold_to_open_ms": [60, 1000]`.
     pub limits: Json,
+    /// The blob shape each style starts from: `{ "viscous": { ... }, "elastic": { ... } }`.
+    pub blob_presets: Json,
 }
 
 /// Why the file could not be opened.
@@ -116,6 +118,7 @@ impl Session {
             new_file: self.bytes.is_none(),
             defaults: serde_json::to_value(Config::default()).unwrap_or_default(),
             limits: limits(),
+            blob_presets: blob_presets(),
         }
     }
 
@@ -201,6 +204,20 @@ fn limits() -> Json {
         "animation.break_at": [*BREAK_AT.start(), *BREAK_AT.end()],
         "animation.wobble": [*WOBBLE.start(), *WOBBLE.end()],
     })
+}
+
+/// The blob shape of each style, as choosing a style sets it.
+fn blob_presets() -> Json {
+    let preset = |style: BlobStyle| {
+        let p = style.preset();
+        json!({
+            "blob_ms_per_item": p.blob_ms_per_item,
+            "viscosity": p.viscosity,
+            "break_at": p.break_at,
+            "wobble": p.wobble,
+        })
+    };
+    json!({ "viscous": preset(BlobStyle::Viscous), "elastic": preset(BlobStyle::Elastic) })
 }
 
 /// The settings as the engine reads them, and its warnings.

@@ -10,6 +10,8 @@ export const store = {
   defaults: null,
   /** Allowed range of each number, by key path: { 'behavior.hold_to_open_ms': [60, 1000] }. */
   limits: {},
+  /** The blob shape each style starts from: { viscous: {...}, elastic: {...} }. */
+  blobPresets: {},
   /** Problems the engine found in the file when it was read. */
   warnings: [],
   path: '',
@@ -37,6 +39,7 @@ export function reset(snapshot) {
   store.settings = snapshot.settings;
   store.defaults = snapshot.defaults;
   store.limits = snapshot.limits;
+  store.blobPresets = snapshot.blob_presets;
   store.warnings = snapshot.warnings;
   store.path = snapshot.path;
   store.newFile = snapshot.new_file;

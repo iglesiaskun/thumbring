@@ -323,6 +323,27 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-r
   .g-layout { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ---------- Animation page ---------- */
+.a-layout { display: grid; grid-template-columns: minmax(0, 1fr) 336px; gap: 16px; align-items: start; }
+.a-stage-col { position: sticky; top: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.stage.demo { height: 520px; }
+.stage-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stage-tools .tgl { margin-left: auto; font-size: 13px; }
+.tgl { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.sub-h { padding: 12px 16px 0; font-size: 12px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.02em; }
+.card > .sub-h + * { border-top: 0; }
+.style-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px 16px 14px; }
+.style-card { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--field); cursor: pointer; }
+.style-card input { position: absolute; opacity: 0; pointer-events: none; }
+.style-card:has(input:checked) { border-color: var(--fill); box-shadow: inset 0 0 0 1px var(--fill); }
+.style-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.style-card b { font-size: 14px; }
+.style-card small { color: var(--ink-2); font-size: 12px; }
+@media (max-width: 980px) {
+  .a-layout { grid-template-columns: minmax(0, 1fr); }
+  .a-stage-col { position: static; }
+}
+
 /* ---------- Ring page ---------- */
 .ring-grid { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 16px; align-items: start; }
 .ring-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
