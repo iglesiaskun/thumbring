@@ -1,8 +1,9 @@
-//! Engine: gestures on the mouse Back button and the action ring on Forward.
+//! Engine: mouse gestures on one button and the action ring on another (Back
+//! and Forward unless the settings file says otherwise).
 //!
-//! Hold Back, drag and release: the gesture runs the command from the settings
-//! file. Hold Forward: the ring opens around the cursor. A quick tap on either
-//! button still does what the button always did.
+//! Hold the gesture button, drag and release: the gesture runs the command
+//! from the settings file. Hold the ring button: the ring opens around the
+//! cursor. A quick tap on either button still does what the button always did.
 //!
 //! Threads:
 //! - **hook**: the mouse hook; it only decides whether to block and forwards
@@ -120,7 +121,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         match ring::controller::spawn(ring::controller::Settings::of(&config), events.clone()) {
             Ok((handle, thread)) => (Some(handle), Some(thread)),
             Err(e) => {
-                warning!("the ring could not start ({e}); the Forward button works as usual");
+                warning!("the ring could not start ({e}); its button works as usual");
                 (None, None)
             }
         };

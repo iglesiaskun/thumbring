@@ -12,11 +12,11 @@ use toml::{Table, Value};
 
 use super::{
     Animation, Apps, Behavior, BlobStyle, Config, FORMAT_VERSION, GestureOverrides, Gestures,
-    OpenWith, Profile, limits,
+    MouseButton, OpenWith, Profile, limits,
 };
 use crate::apps::AppName;
 use crate::command::Command;
-use crate::ring::{Action, FOLDER_MAX_ITEMS, ICONS, Ring, SLOT_COUNT, Slot};
+use crate::ring::{self, Action, FOLDER_MAX_ITEMS, ICONS, Ring, SLOT_COUNT, Slot};
 
 /// Result of loading: an always usable configuration and the warnings about
 /// what was corrected or ignored.
@@ -74,6 +74,16 @@ impl fmt::Display for BlobStyle {
     }
 }
 
+impl fmt::Display for MouseButton {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            MouseButton::Back => "back",
+            MouseButton::Forward => "forward",
+            MouseButton::Middle => "middle",
+        })
+    }
+}
+
 impl fmt::Display for OpenWith {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
@@ -100,8 +110,9 @@ pub(super) fn from_toml(text: &str) -> Result<Loaded, ConfigError> {
     read_version(version, &mut warnings);
     let animation = read_animation(animation, &mut warnings);
     let behavior = read_behavior(behavior, &mut warnings);
-    let ring = read_ring(ring, &mut warnings);
-    let gestures = read_gestures(gestures, &mut warnings);
+    let mut ring = read_ring(ring, &mut warnings);
+    let mut gestures = read_gestures(gestures, &mut warnings);
+    check_buttons(&mut gestures, &mut ring, &mut warnings);
     let apps = read_apps(apps, &mut warnings);
     // Profiles come after the exclusion list to warn about apps in both.
     let profiles = read_profiles(profiles, &apps.excluded, &mut warnings);
@@ -143,6 +154,7 @@ fn read_gestures(value: Option<Value>, warnings: &mut Vec<Warning>) -> Gestures 
     let mut s = Section::open("gestures", value, warnings);
     let d = Gestures::default();
     let gestures = Gestures {
+        button: s.or_default("button", d.button),
         up: s.command_or("up", d.up),
         down: s.command_or("down", d.down),
         left: s.command_or("left", d.left),
@@ -309,15 +321,38 @@ fn read_behavior(value: Option<Value>, warnings: &mut Vec<Warning>) -> Behavior 
     behavior
 }
 
+/// One button cannot do two things. While the ring has no items, its button
+/// is free: it does what it always did, and the gestures may take it.
+fn check_buttons(gestures: &mut Gestures, ring: &mut Ring, warnings: &mut Vec<Warning>) {
+    if gestures.button != ring.button || ring.is_empty() {
+        return;
+    }
+    let (for_gestures, for_ring) = (Gestures::default().button, ring::DEFAULT_BUTTON);
+    warnings.push(Warning::new(
+        "ring.button",
+        format!(
+            "\"{}\" is also the gesture button (gestures.button); both went back to their \
+             defaults, \"{for_gestures}\" for the gestures and \"{for_ring}\" for the ring",
+            ring.button
+        ),
+    ));
+    gestures.button = for_gestures;
+    ring.button = for_ring;
+}
+
 fn read_ring(value: Option<Value>, warnings: &mut Vec<Warning>) -> Ring {
     let mut s = Section::open("ring", value, warnings);
+    let button = s.or_default("button", ring::DEFAULT_BUTTON);
     // Without a list of slots (or with something else in its place) the ring
     // is the default one. An empty list turns the ring off.
     let listed = matches!(s.table.get("slots"), Some(Value::Array(_)));
     let slots = s.array("slots");
     s.finish();
     if !listed {
-        return Ring::default();
+        return Ring {
+            button,
+            ..Ring::default()
+        };
     }
 
     if slots.len() > SLOT_COUNT {
@@ -330,7 +365,10 @@ fn read_ring(value: Option<Value>, warnings: &mut Vec<Warning>) -> Ring {
         ));
     }
     // Fewer than 8 slots is normal: the missing ones stay empty.
-    let mut ring = Ring::empty();
+    let mut ring = Ring {
+        button,
+        ..Ring::empty()
+    };
     for (i, value) in slots.into_iter().take(SLOT_COUNT).enumerate() {
         ring.slots[i] = read_slot(format!("ring.slots[{i}]"), value, warnings);
     }

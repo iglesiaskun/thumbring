@@ -33,13 +33,21 @@ version = 1
 #   "native"         what the button would do without the engine
 #   "none"           nothing
 
-# Hold the mouse Back button, drag to one side and release.
+# MOUSE BUTTONS
+#   "back"      the side button that goes back (also called button 4)
+#   "forward"   the side button that goes forward (button 5)
+#   "middle"    the wheel button
+# One button cannot run the gestures and open the ring at once. While the
+# ring is off, the gestures may use its button.
+
+# Hold the gesture button, drag to one side and release.
 [gestures]
+button = "back"           # "back", "forward" or "middle"
 up = "Win+Tab"            # Task View
 down = "Win+D"            # show the desktop
 left = "Ctrl+Win+Right"   # next virtual desktop (pushes this one aside)
 right = "Ctrl+Win+Left"   # previous virtual desktop
-click = "native"          # quick tap without dragging: Back
+click = "native"          # quick tap without dragging: the button's own click
 # Minimum drag distance, in pixels at 100% scaling (10 to 200). On screens
 # with a larger scale, the engine grows it in the same proportion.
 threshold_px = 30
@@ -91,10 +99,10 @@ folder_close_ms = 100
 ignore_system_reduced_motion = false
 
 # THE RING
-# Hold the mouse Forward button: the ring opens around the cursor. It has 8
-# slots, starting at the top, clockwise. A slot holds an action, a folder with
-# up to 9 actions, or nothing (type = "empty"). Click an item to run it; a
-# folder opens when the cursor rests on it.
+# Hold the ring button: the ring opens around the cursor. It has 8 slots,
+# starting at the top, clockwise. A slot holds an action, a folder with up to
+# 9 actions, or nothing (type = "empty"). Click an item to run it; a folder
+# opens when the cursor rests on it.
 #
 # Each action has a name (its label), an icon and a command (see COMMANDS at
 # the top). Without an icon, the item shows the first letter of its name.
@@ -102,11 +110,11 @@ ignore_system_reduced_motion = false
 # code, copy, folder-open, globe, headphones, layout-grid, lock, mail, music,
 # play, redo-2, scan, scissors, settings, skip-back, skip-forward, smile,
 # sticky-note, terminal, undo-2, volume-1, volume-2, volume-x, x.
-#
-# To turn the ring off and keep the Forward button as it always was, replace
-# all the slots below with:
-#
-# [ring]
+
+[ring]
+button = "forward"        # "forward", "back" or "middle"
+# To turn the ring off and keep its button as it always was, delete all the
+# [[ring.slots]] below and remove the # from the next line:
 # slots = []
 
 [[ring.slots]]

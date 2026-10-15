@@ -3,15 +3,16 @@
 //! Every event carries [`SIGNATURE`] in `dwExtraInfo`.
 
 use thumbring_core::command::{Chord, Key, Modifiers};
+use thumbring_core::config::MouseButton;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBD_EVENT_FLAGS, KEYBDINPUT,
-    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, MOUSE_EVENT_FLAGS, MOUSEEVENTF_XDOWN,
-    MOUSEEVENTF_XUP, MOUSEINPUT, MapVirtualKeyW, SendInput, VIRTUAL_KEY, VK_APPS, VK_BACK,
-    VK_BROWSER_BACK, VK_BROWSER_FORWARD, VK_BROWSER_REFRESH, VK_CONTROL, VK_DELETE, VK_DOWN,
-    VK_END, VK_ESCAPE, VK_F1, VK_HOME, VK_INSERT, VK_LEFT, VK_LWIN, VK_MEDIA_NEXT_TRACK,
-    VK_MEDIA_PLAY_PAUSE, VK_MEDIA_PREV_TRACK, VK_MEDIA_STOP, VK_MENU, VK_NEXT, VK_PRIOR, VK_RETURN,
-    VK_RIGHT, VK_SHIFT, VK_SNAPSHOT, VK_SPACE, VK_TAB, VK_UP, VK_VOLUME_DOWN, VK_VOLUME_MUTE,
-    VK_VOLUME_UP, VkKeyScanExW,
+    KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC, MOUSE_EVENT_FLAGS,
+    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, MOUSEINPUT,
+    MapVirtualKeyW, SendInput, VIRTUAL_KEY, VK_APPS, VK_BACK, VK_BROWSER_BACK, VK_BROWSER_FORWARD,
+    VK_BROWSER_REFRESH, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END, VK_ESCAPE, VK_F1, VK_HOME,
+    VK_INSERT, VK_LEFT, VK_LWIN, VK_MEDIA_NEXT_TRACK, VK_MEDIA_PLAY_PAUSE, VK_MEDIA_PREV_TRACK,
+    VK_MEDIA_STOP, VK_MENU, VK_NEXT, VK_PRIOR, VK_RETURN, VK_RIGHT, VK_SHIFT, VK_SNAPSHOT,
+    VK_SPACE, VK_TAB, VK_UP, VK_VOLUME_DOWN, VK_VOLUME_MUTE, VK_VOLUME_UP, VkKeyScanExW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GetForegroundWindow, GetWindowThreadProcessId, XBUTTON1, XBUTTON2,
@@ -22,32 +23,26 @@ use windows::Win32::UI::WindowsAndMessaging::{
 /// bytes of "THMB".
 pub const SIGNATURE: usize = 0x5448_4D42;
 
-/// Sends a Back button click (press and release) again at the current position.
-pub fn click_back() -> Result<(), String> {
-    click_extra(XBUTTON1)
-}
-
-/// Sends a Forward button click (press and release) again at the current
+/// Sends a click (press and release) of `button` again, at the current
 /// position.
-pub fn click_forward() -> Result<(), String> {
-    click_extra(XBUTTON2)
+pub fn click(button: MouseButton) -> Result<(), String> {
+    let (down, up, data) = match button {
+        MouseButton::Back => (MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, XBUTTON1),
+        MouseButton::Forward => (MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP, XBUTTON2),
+        MouseButton::Middle => (MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, 0),
+    };
+    send(&[mouse(down, data), mouse(up, data)])
 }
 
-fn click_extra(button: u16) -> Result<(), String> {
-    send(&[
-        extra_button(button, MOUSEEVENTF_XDOWN),
-        extra_button(button, MOUSEEVENTF_XUP),
-    ])
-}
-
-fn extra_button(button: u16, flags: MOUSE_EVENT_FLAGS) -> INPUT {
+/// `data` says which extra button, for `MOUSEEVENTF_XDOWN` and `XUP`.
+fn mouse(flags: MOUSE_EVENT_FLAGS, data: u16) -> INPUT {
     INPUT {
         r#type: INPUT_MOUSE,
         Anonymous: INPUT_0 {
             mi: MOUSEINPUT {
                 dx: 0,
                 dy: 0,
-                mouseData: u32::from(button),
+                mouseData: u32::from(data),
                 dwFlags: flags,
                 time: 0,
                 dwExtraInfo: SIGNATURE,

@@ -13,6 +13,8 @@ A lightweight Windows tool that gives any mouse **gestures** and a radial
   slot is an action or a folder with up to 9 actions.
 - **A quick tap** on either button still does what the button always did (go
   back or forward).
+- **Other buttons** can take either job: Back, Forward or the middle button
+  (pressing the wheel).
 
 <!--
   GIF: the ring. Save it as docs/media/ring.gif and replace this comment with
@@ -31,8 +33,9 @@ each version is in the [changelog](CHANGELOG.md).
 
 ## Install
 
-Thumbring runs on Windows 10 and 11 (64-bit) and works with any mouse that has
-the two side buttons, Back and Forward.
+Thumbring runs on Windows 10 and 11 (64-bit). By default it uses the two side
+buttons of the mouse, Back and Forward; on a mouse without them, the middle
+button can run the gestures or open the ring instead (see "Configuration").
 
 1. Download the latest version from the
    [Releases page](https://github.com/iglesiaskun/thumbring/releases/latest):
@@ -61,7 +64,8 @@ folder. Your settings and the log stay in `%APPDATA%\thumbring` and
 
 ## Using Thumbring
 
-Hold the mouse Back button, drag about 3 cm and release:
+Hold the mouse Back button, drag about 3 cm and release (the buttons can be
+changed; see "Configuration"):
 
 | Gesture | Default |
 |---|---|
@@ -112,6 +116,7 @@ without it counts as version 1.
 version = 1
 
 [gestures]
+button = "back"             # "back", "forward" or "middle"
 up = "Win+Tab"
 down = "Win+D"
 left = "Ctrl+Win+Right"
@@ -130,6 +135,14 @@ apps = ["browser.exe"]      # the executable of your browser
 gestures = { left = "Ctrl+Tab", right = "Ctrl+Shift+Tab" }
 ```
 
+`button` under `[gestures]` is the button that runs the gestures, and
+`button` under `[ring]` the one that opens the ring: `"back"`, `"forward"` or
+`"middle"` (pressing the wheel). They are Back and Forward unless you change
+them. One button cannot do both: if the two name the same button, both go
+back to their defaults, with a warning. While the ring is off, the gestures
+may use its button. A quick tap, like the `"native"` command, sends the click
+of the button that was held.
+
 Commands, for gestures and ring actions alike:
 
 | Text | Does |
@@ -145,9 +158,8 @@ Commands, for gestures and ring actions alike:
 The ring is configured in the same file, which comes with the default ring
 written out. It has 8 slots, starting at the top, clockwise; each one holds an
 action, a folder with up to 9 actions, or nothing (`type = "empty"`). Saved
-changes apply the next time the ring opens. To turn the ring off and keep the
-Forward button as it always was, leave the list empty: `slots = []` under
-`[ring]`.
+changes apply the next time the ring opens. To turn the ring off and keep its
+button as it always was, leave the list empty: `slots = []` under `[ring]`.
 
 Icons: `calculator`, `calendar`, `clipboard`, `clipboard-list`,
 `clipboard-paste`, `code`, `copy`, `folder-open`, `globe`, `headphones`,
@@ -166,6 +178,9 @@ speed = 1.0           # 0.5 to 2.0
 open_with = "hold"    # or "tap"
 hold_to_open_ms = 150
 path_tolerance_ms = 50
+
+[ring]
+button = "forward"    # "forward", "back" or "middle"
 
 [[ring.slots]]
 type = "action"
@@ -211,8 +226,8 @@ without a UAC prompt. If that worries you, leave the option off, or unzip the
 `.zip` into a folder that only administrators can change, such as
 `C:\Program Files\Thumbring`, and turn the option on from the Thumbring in
 that folder. For the same reason, while it has administrator rights,
-Thumbring ignores Back and Forward presses that other programs simulate, such
-as remote control tools or software that remaps mouse buttons: only the real
+Thumbring ignores mouse button presses that other programs simulate, such as
+remote control tools or software that remaps mouse buttons: only the real
 mouse buttons run gestures and open the ring.
 
 **Games and anti-cheat.** Thumbring uses the same Windows features as macro
@@ -248,8 +263,10 @@ No. It makes no network connections. The log stays on your computer; it lists
 the names of the apps you focus, which helps when writing profiles.
 
 **Does it work with my mouse?**
-With any mouse that has the two side buttons, Back and Forward (sometimes
-called buttons 4 and 5).
+Yes. By default Thumbring uses the two side buttons, Back and Forward
+(sometimes called buttons 4 and 5). On a mouse without them, write
+`button = "middle"` under `[gestures]` or under `[ring]` in the settings file,
+and pressing the wheel runs the gestures or opens the ring.
 
 **How do I change the gestures or the ring?**
 Right-click the tray icon > Open settings file, edit it and save it. Thumbring

@@ -7,6 +7,7 @@
 use serde::Serialize;
 
 use crate::command::Command;
+use crate::config::MouseButton;
 
 /// Fixed number of slots in the ring.
 pub const SLOT_COUNT: usize = 8;
@@ -81,20 +82,27 @@ pub enum Slot {
     },
 }
 
-/// The whole ring. The fixed-size array guarantees, at compile time, that
-/// there are always exactly [`SLOT_COUNT`] slots.
+/// The whole ring: the button that opens it and its slots. The fixed-size
+/// array guarantees, at compile time, that there are always exactly
+/// [`SLOT_COUNT`] slots.
 ///
 /// [`Ring::default`] is the ring the engine starts with; [`Ring::empty`] has
-/// nothing in it.
+/// nothing in it. Both open with [`DEFAULT_BUTTON`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Ring {
+    /// Never the same as the gesture button while the ring has items.
+    pub button: MouseButton,
     pub slots: [Slot; SLOT_COUNT],
 }
+
+/// The button that opens the ring unless the settings say otherwise.
+pub const DEFAULT_BUTTON: MouseButton = MouseButton::Forward;
 
 impl Ring {
     /// A ring with every slot empty.
     pub fn empty() -> Self {
         Self {
+            button: DEFAULT_BUTTON,
             slots: Default::default(),
         }
     }
@@ -110,6 +118,7 @@ impl Ring {
 impl Default for Ring {
     fn default() -> Self {
         Self {
+            button: DEFAULT_BUTTON,
             slots: [
                 action("Play or pause", "play", "PlayPause"),
                 action("Screenshot", "scan", "screenshot"),

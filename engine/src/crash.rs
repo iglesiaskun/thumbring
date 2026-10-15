@@ -2,8 +2,8 @@
 //! the mouse back, says so and quits.
 //!
 //! Without this, a panic would end only the thread where it happened. The
-//! others would keep running: the hook could keep taking the Back button with
-//! no worker left to act on it, and the release build would show nothing.
+//! others would keep running: the hook could keep taking the gesture button
+//! with no worker left to act on it, and the release build would show nothing.
 
 use std::path::PathBuf;
 use std::thread;

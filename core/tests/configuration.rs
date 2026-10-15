@@ -8,7 +8,7 @@ use thumbring_core::apps::AppName;
 use thumbring_core::command::Command;
 use thumbring_core::config::{
     Animation, Behavior, BlobStyle, Config, ConfigError, DEFAULT_FILE, FORMAT_VERSION,
-    GestureOverrides, OpenWith, Profile,
+    GestureOverrides, MouseButton, OpenWith, Profile,
 };
 use thumbring_core::ring::{Action, FOLDER_MAX_ITEMS, ICONS, Ring, SLOT_COUNT, Slot};
 
@@ -846,6 +846,158 @@ fn threshold_limits_are_inclusive() {
 }
 
 // ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+
+fn buttons(config: &Config) -> (MouseButton, MouseButton) {
+    (config.gestures.button, config.ring.button)
+}
+
+#[test]
+fn the_buttons_default_to_back_and_forward() {
+    use MouseButton::{Back, Forward};
+    assert_eq!(buttons(&Config::default()), (Back, Forward));
+
+    // A file written before the buttons could change works as it always did.
+    let (config, warnings) = load(
+        r#"
+        version = 1
+        [gestures]
+        up = "F5"
+
+        [[ring.slots]]
+        type = "action"
+        name = "A"
+        "#,
+    );
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert_eq!(buttons(&config), (Back, Forward));
+}
+
+#[test]
+fn the_buttons_are_read() {
+    let (config, warnings) = load(
+        r#"
+        [gestures]
+        button = "middle"
+
+        [ring]
+        button = "back"
+        "#,
+    );
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert_eq!(buttons(&config), (MouseButton::Middle, MouseButton::Back));
+    // Without slots, the ring is still the default one.
+    assert_eq!(config.ring.slots, Ring::default().slots);
+}
+
+#[test]
+fn the_ring_button_goes_before_the_slots() {
+    let (config, warnings) = load(
+        r#"
+        [ring]
+        button = "middle"
+
+        [[ring.slots]]
+        type = "action"
+        name = "A"
+        "#,
+    );
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert_eq!(config.ring.button, MouseButton::Middle);
+    assert_eq!(config.ring.slots[0], Slot::Action(action("A")));
+    assert!(config.ring.slots[1..].iter().all(|s| *s == Slot::Empty));
+}
+
+#[test]
+fn an_empty_list_of_slots_still_turns_the_ring_off_next_to_a_button() {
+    let (config, warnings) = load("[ring]\nbutton = \"middle\"\nslots = []\n");
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert!(config.ring.is_empty());
+    assert_eq!(config.ring.button, MouseButton::Middle);
+}
+
+#[test]
+fn an_unknown_button_falls_back_to_its_default() {
+    for value in [r#""left""#, r#""Back""#, r#""""#, "4", "true"] {
+        let loaded = Config::from_toml(&format!(
+            "[gestures]\nbutton = {value}\n[ring]\nbutton = {value}\n"
+        ))
+        .expect("valid TOML");
+        let keys: Vec<_> = loaded.warnings.iter().map(|w| w.key.as_str()).collect();
+        assert_eq!(keys, ["ring.button", "gestures.button"], "{value}");
+        assert!(
+            loaded.warnings[1]
+                .message
+                .contains("using the default back"),
+            "{:?}",
+            loaded.warnings
+        );
+        let defaults = (MouseButton::Back, MouseButton::Forward);
+        assert_eq!(buttons(&loaded.config), defaults, "{value}");
+    }
+}
+
+#[test]
+fn the_same_button_for_both_goes_back_to_the_defaults() {
+    use MouseButton::{Back, Forward};
+    for button in ["back", "forward", "middle"] {
+        let loaded = Config::from_toml(&format!(
+            "[gestures]\nbutton = \"{button}\"\n[ring]\nbutton = \"{button}\"\n"
+        ))
+        .expect("valid TOML");
+        let keys: Vec<_> = loaded.warnings.iter().map(|w| w.key.as_str()).collect();
+        assert_eq!(keys, ["ring.button"], "{button}");
+        assert!(
+            loaded.warnings[0]
+                .message
+                .contains("both went back to their defaults"),
+            "{:?}",
+            loaded.warnings
+        );
+        assert_eq!(buttons(&loaded.config), (Back, Forward), "{button}");
+    }
+
+    // Only one of them written: it takes the other one's default button.
+    let (config, warnings) = load("[gestures]\nbutton = \"forward\"\n");
+    assert_eq!(warnings, ["ring.button"]);
+    assert_eq!(buttons(&config), (Back, Forward));
+    let (config, warnings) = load("[ring]\nbutton = \"back\"\n");
+    assert_eq!(warnings, ["ring.button"]);
+    assert_eq!(buttons(&config), (Back, Forward));
+}
+
+#[test]
+fn while_the_ring_is_off_the_gestures_may_take_its_button() {
+    let (config, warnings) = load(
+        r#"
+        [gestures]
+        button = "forward"
+
+        [ring]
+        slots = []
+        "#,
+    );
+    assert!(warnings.is_empty(), "{warnings:?}");
+    assert_eq!(config.gestures.button, MouseButton::Forward);
+    assert!(config.ring.is_empty());
+}
+
+#[test]
+fn a_profile_cannot_change_the_button() {
+    let (config, warnings) = load(
+        r#"
+        [[profiles]]
+        apps = ["app.exe"]
+        gestures = { button = "middle", up = "F5" }
+        "#,
+    );
+    assert_eq!(warnings, ["profiles[0].gestures.button"]);
+    assert_eq!(config.gestures.button, MouseButton::Back);
+    assert_eq!(config.profiles[0].gestures.up, Some(cmd("F5")));
+}
+
+// ---------------------------------------------------------------------------
 // Apps and exclusion
 // ---------------------------------------------------------------------------
 
@@ -1055,6 +1207,8 @@ fn ring_action_commands_are_validated() {
 #[test]
 fn gestures_apps_and_profiles_read_back_identical() {
     let mut config = Config::default();
+    config.gestures.button = MouseButton::Middle;
+    config.ring.button = MouseButton::Back;
     config.gestures.up = cmd(r#"open:"C:\Program Files\App\app.exe" --x"#);
     config.gestures.click = cmd("Alt+Left");
     config.gestures.threshold_px = 50;

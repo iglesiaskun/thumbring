@@ -9,12 +9,15 @@
 //! do I/O.
 //!
 //! What the mouse hook takes:
-//! - the Back button, for gestures;
-//! - the Forward button, for the ring (only when the ring has items);
-//! - while the ring is open, every click and the wheel, so the app below never
-//!   sees them, and Esc on the keyboard.
+//! - the gesture button (Back unless the settings say otherwise);
+//! - the ring button (Forward unless the settings say otherwise), only when
+//!   the ring has items;
+//! - while the ring is open, every other click and the wheel, so the app below
+//!   never sees them, and Esc on the keyboard.
 //!
 //! Blocking is always symmetric: a release is blocked only if its press was.
+//! The hook remembers what each blocked press was for, and its release follows
+//! that, whatever the settings say by then.
 //!
 //! The hooks come and go while the engine runs (pause, excluded app,
 //! fullscreen): without a hook, Windows does not even call the engine on every
@@ -27,6 +30,7 @@ use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 
+use thumbring_core::config::MouseButton;
 use thumbring_core::gesture::Point;
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -44,20 +48,22 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use crate::elevation;
 use crate::input::SIGNATURE;
 
-/// A regular mouse button.
+/// A mouse button, as the hook sees it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Button {
     Left,
     Right,
     Middle,
+    Back,
+    Forward,
 }
 
-impl Button {
-    fn bit(self) -> u8 {
-        match self {
-            Button::Left => 1,
-            Button::Right => 2,
-            Button::Middle => 4,
+impl From<MouseButton> for Button {
+    fn from(button: MouseButton) -> Self {
+        match button {
+            MouseButton::Back => Button::Back,
+            MouseButton::Forward => Button::Forward,
+            MouseButton::Middle => Button::Middle,
         }
     }
 }
@@ -65,18 +71,22 @@ impl Button {
 /// What the hooks send to the worker thread.
 #[derive(Debug, Clone, Copy)]
 pub enum HookEvent {
-    /// Back button pressed. The event was blocked.
-    BackDown { pos: Point, time: u32 },
-    /// The cursor moved while Back or Forward was held, or while the ring is
-    /// open. The movement is not blocked.
+    /// The gesture button was pressed. The event was blocked.
+    GestureDown {
+        button: MouseButton,
+        pos: Point,
+        time: u32,
+    },
+    /// The cursor moved while the gesture or the ring button was held, or
+    /// while the ring is open. The movement is not blocked.
     Move { pos: Point },
-    /// Back button released. The event was blocked.
-    BackUp { pos: Point, time: u32 },
-    /// Forward button pressed (it opens the ring). The event was blocked.
-    ForwardDown,
-    /// Forward button released. The event was blocked.
-    ForwardUp,
-    /// A mouse button was pressed while the ring is open. The click was
+    /// The gesture button was released. The event was blocked.
+    GestureUp { pos: Point, time: u32 },
+    /// The ring button was pressed. The event was blocked.
+    TriggerDown { button: MouseButton },
+    /// The ring button was released. The event was blocked.
+    TriggerUp,
+    /// Another mouse button was pressed while the ring is open. The click was
     /// blocked, and so will its release be.
     Click { button: Button, pos: Point },
     /// Esc was pressed while the ring is open. The key was blocked.
@@ -96,17 +106,20 @@ type Sink = Box<dyn Fn(HookEvent) + Send + Sync>;
 static SINK: OnceLock<Sink> = OnceLock::new();
 /// Hook thread, so other threads can post messages to it.
 static THREAD_ID: AtomicU32 = AtomicU32::new(0);
-/// Between a Back press we blocked and the matching release.
-static BACK_HELD: AtomicBool = AtomicBool::new(false);
-/// Between a Forward press we blocked and the matching release.
-static FORWARD_HELD: AtomicBool = AtomicBool::new(false);
-/// Regular buttons whose press we blocked while the ring was open.
-static BUTTONS_HELD: AtomicU8 = AtomicU8::new(0);
+/// What each button's press was blocked for ([`Role`]), one per [`Button`],
+/// until the matching release.
+static HELD: [AtomicU8; 5] = [const { AtomicU8::new(Role::Free as u8) }; 5];
+/// The buttons the settings ask for ([`Buttons::pack`]).
+static WANTED_BUTTONS: AtomicU8 = AtomicU8::new(Buttons::DEFAULT.pack());
+/// The buttons in use. They follow [`WANTED_BUTTONS`] only at a press while no
+/// blocked press waits for its release and the ring is closed, so a button
+/// never changes its job in the middle of a gesture or with the ring open.
+static BUTTONS: AtomicU8 = AtomicU8::new(Buttons::DEFAULT.pack());
 /// Between an Esc press we blocked and its release.
 static ESC_HELD: AtomicBool = AtomicBool::new(false);
 /// Whether the engine wants the hooks right now. The worker thread decides.
 static WANTED: AtomicBool = AtomicBool::new(true);
-/// The Forward button opens the ring (the ring has at least one item).
+/// The ring button opens the ring (the ring has at least one item).
 static RING_ENABLED: AtomicBool = AtomicBool::new(false);
 /// The ring is open and takes every click, the wheel and Esc.
 static RING_OPEN: AtomicBool = AtomicBool::new(false);
@@ -117,6 +130,71 @@ static GAVE_UP: AtomicBool = AtomicBool::new(false);
 const RECONCILE: u32 = WM_APP;
 /// Thread message: "install the hooks that are in place again".
 const REINSTALL: u32 = WM_APP + 1;
+
+/// What a blocked press was for.
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+enum Role {
+    /// No blocked press waits for its release.
+    Free,
+    Gesture,
+    Trigger,
+    /// A click while the ring was open.
+    Click,
+}
+
+impl Role {
+    fn from_byte(byte: u8) -> Role {
+        match byte {
+            1 => Role::Gesture,
+            2 => Role::Trigger,
+            3 => Role::Click,
+            _ => Role::Free,
+        }
+    }
+}
+
+/// Which button runs the gestures and which opens the ring.
+#[derive(Clone, Copy)]
+struct Buttons {
+    gestures: MouseButton,
+    ring: MouseButton,
+}
+
+impl Buttons {
+    const DEFAULT: Buttons = Buttons {
+        gestures: MouseButton::Back,
+        ring: MouseButton::Forward,
+    };
+
+    /// In one byte, so both buttons always change together.
+    const fn pack(self) -> u8 {
+        code(self.gestures) | code(self.ring) << 4
+    }
+
+    fn unpack(byte: u8) -> Buttons {
+        Buttons {
+            gestures: from_code(byte & 0xF),
+            ring: from_code(byte >> 4),
+        }
+    }
+}
+
+const fn code(button: MouseButton) -> u8 {
+    match button {
+        MouseButton::Back => 0,
+        MouseButton::Forward => 1,
+        MouseButton::Middle => 2,
+    }
+}
+
+fn from_code(code: u8) -> MouseButton {
+    match code {
+        0 => MouseButton::Back,
+        1 => MouseButton::Forward,
+        _ => MouseButton::Middle,
+    }
+}
 
 /// Installs the mouse hook on a new thread and waits for it to be active.
 ///
@@ -144,7 +222,14 @@ pub fn set_enabled(enabled: bool) {
     post(RECONCILE);
 }
 
-/// Whether the Forward button opens the ring. Without items, it should keep
+/// Which button runs the gestures and which opens the ring. Can be called from
+/// any thread. The change waits until no blocked press is held and the ring is
+/// closed: a press already blocked is released the way it started.
+pub fn set_buttons(gestures: MouseButton, ring: MouseButton) {
+    WANTED_BUTTONS.store(Buttons { gestures, ring }.pack(), Ordering::SeqCst);
+}
+
+/// Whether the ring button opens the ring. Without items, it should keep
 /// doing what it always did.
 pub fn set_ring_enabled(enabled: bool) {
     RING_ENABLED.store(enabled, Ordering::SeqCst);
@@ -250,10 +335,14 @@ fn set_hook(kind: WINDOWS_HOOK_ID) -> windows::core::Result<HHOOK> {
 /// The hooks must stay: a blocked button is still down (its release must be
 /// blocked too), or the ring is open (it takes every click until it closes).
 fn must_stay() -> bool {
-    BACK_HELD.load(Ordering::SeqCst)
-        || FORWARD_HELD.load(Ordering::SeqCst)
-        || BUTTONS_HELD.load(Ordering::SeqCst) != 0
-        || RING_OPEN.load(Ordering::SeqCst)
+    held(|role| role != Role::Free) || RING_OPEN.load(Ordering::SeqCst)
+}
+
+/// Some button's press was blocked for a role that `matches`, and the release
+/// has not come yet.
+fn held(matches: impl Fn(Role) -> bool) -> bool {
+    HELD.iter()
+        .any(|role| matches(Role::from_byte(role.load(Ordering::SeqCst))))
 }
 
 /// Leaves the hooks the way the worker and ring threads asked. Runs outside
@@ -348,70 +437,64 @@ fn should_block(message: u32, info: &MSLLHOOKSTRUCT) -> bool {
         return false;
     }
     let pos = Point::new(info.pt.x, info.pt.y);
+    let ring_open = RING_OPEN.load(Ordering::Relaxed);
+    match button_event(message, info) {
+        Some((button, true)) => press(button, pos, info.time),
+        Some((button, false)) => release(button, pos, info.time),
+        None => match message {
+            WM_MOUSEWHEEL | WM_MOUSEHWHEEL => ring_open,
+            WM_MOUSEMOVE => {
+                if ring_open || held(|role| matches!(role, Role::Gesture | Role::Trigger)) {
+                    send(HookEvent::Move { pos });
+                }
+                false
+            }
+            _ => false,
+        },
+    }
+}
+
+/// A button went down: blocks it if it runs the gestures, opens the ring, or
+/// is a click while the ring is open.
+fn press(button: Button, pos: Point, time: u32) -> bool {
+    // Nothing in progress: the buttons from the latest settings take over.
+    if !must_stay() {
+        BUTTONS.store(WANTED_BUTTONS.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
+    let buttons = Buttons::unpack(BUTTONS.load(Ordering::Relaxed));
     // Turned off (waiting for the hook thread to remove the hook): new
     // presses pass through; releases of blocked presses are still blocked.
     let wanted = WANTED.load(Ordering::Relaxed);
-    let ring_open = RING_OPEN.load(Ordering::Relaxed);
-    match message {
-        WM_XBUTTONDOWN if extra_button(info) == XBUTTON1 && wanted => {
-            BACK_HELD.store(true, Ordering::Relaxed);
-            send(HookEvent::BackDown {
-                pos,
-                time: info.time,
-            });
-            true
-        }
-        WM_XBUTTONUP if extra_button(info) == XBUTTON1 => {
-            let ours = BACK_HELD.swap(false, Ordering::Relaxed);
-            if ours {
-                send(HookEvent::BackUp {
-                    pos,
-                    time: info.time,
-                });
-                released();
-            }
-            ours
-        }
-        WM_XBUTTONDOWN
-            if extra_button(info) == XBUTTON2 && wanted && RING_ENABLED.load(Ordering::Relaxed) =>
-        {
-            FORWARD_HELD.store(true, Ordering::Relaxed);
-            send(HookEvent::ForwardDown);
-            true
-        }
-        WM_XBUTTONUP if extra_button(info) == XBUTTON2 => {
-            let ours = FORWARD_HELD.swap(false, Ordering::Relaxed);
-            if ours {
-                send(HookEvent::ForwardUp);
-                released();
-            }
-            ours
-        }
-        WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN if ring_open => {
-            let button = button_of(message);
-            BUTTONS_HELD.fetch_or(button.bit(), Ordering::Relaxed);
-            send(HookEvent::Click { button, pos });
-            true
-        }
-        WM_LBUTTONUP | WM_RBUTTONUP | WM_MBUTTONUP => {
-            let bit = button_of(message).bit();
-            let ours = BUTTONS_HELD.fetch_and(!bit, Ordering::Relaxed) & bit != 0;
-            if ours {
-                released();
-            }
-            ours
-        }
-        WM_MOUSEWHEEL | WM_MOUSEHWHEEL if ring_open => true,
-        WM_MOUSEMOVE
-            if ring_open
-                || BACK_HELD.load(Ordering::Relaxed)
-                || FORWARD_HELD.load(Ordering::Relaxed) =>
-        {
-            send(HookEvent::Move { pos });
-            false
-        }
-        _ => false,
+    let (role, event) = if wanted && button == buttons.gestures.into() {
+        let button = buttons.gestures;
+        (Role::Gesture, HookEvent::GestureDown { button, pos, time })
+    } else if wanted && button == buttons.ring.into() && RING_ENABLED.load(Ordering::Relaxed) {
+        let button = buttons.ring;
+        (Role::Trigger, HookEvent::TriggerDown { button })
+    } else if RING_OPEN.load(Ordering::Relaxed) {
+        // Even the ring button, when the ring has no items any more: the ring
+        // takes every click until it closes.
+        (Role::Click, HookEvent::Click { button, pos })
+    } else {
+        return false;
+    };
+    HELD[button as usize].store(role as u8, Ordering::Relaxed);
+    send(event);
+    true
+}
+
+/// A button went up: blocked only if its press was, and reported as the press
+/// was.
+fn release(button: Button, pos: Point, time: u32) -> bool {
+    let role = HELD[button as usize].swap(Role::Free as u8, Ordering::Relaxed);
+    match Role::from_byte(role) {
+        Role::Free => return false,
+        Role::Gesture => send(HookEvent::GestureUp { pos, time }),
+        Role::Trigger => send(HookEvent::TriggerUp),
+        Role::Click => {}
     }
+    released();
+    true
 }
 
 /// After the release of a blocked press: a removal may have been waiting.
@@ -421,17 +504,27 @@ fn released() {
     }
 }
 
-fn button_of(message: u32) -> Button {
-    match message {
-        WM_LBUTTONDOWN | WM_LBUTTONUP => Button::Left,
-        WM_RBUTTONDOWN | WM_RBUTTONUP => Button::Right,
-        _ => Button::Middle,
-    }
-}
-
-/// The high word of `mouseData` says which extra button was used.
-fn extra_button(info: &MSLLHOOKSTRUCT) -> u16 {
-    (info.mouseData >> 16) as u16
+/// The button of a press (`true`) or release (`false`), if the message is one.
+fn button_event(message: u32, info: &MSLLHOOKSTRUCT) -> Option<(Button, bool)> {
+    let event = match message {
+        WM_LBUTTONDOWN => (Button::Left, true),
+        WM_LBUTTONUP => (Button::Left, false),
+        WM_RBUTTONDOWN => (Button::Right, true),
+        WM_RBUTTONUP => (Button::Right, false),
+        WM_MBUTTONDOWN => (Button::Middle, true),
+        WM_MBUTTONUP => (Button::Middle, false),
+        WM_XBUTTONDOWN | WM_XBUTTONUP => {
+            // The high word of `mouseData` says which extra button was used.
+            let button = match (info.mouseData >> 16) as u16 {
+                XBUTTON1 => Button::Back,
+                XBUTTON2 => Button::Forward,
+                _ => return None,
+            };
+            (button, message == WM_XBUTTONDOWN)
+        }
+        _ => return None,
+    };
+    Some(event)
 }
 
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {

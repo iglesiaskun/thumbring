@@ -11,6 +11,8 @@ ações** radial:
   slot é uma ação ou uma pasta com até 9 ações.
 - **Um toque rápido** em qualquer um dos dois continua fazendo o que o botão
   sempre fez (voltar ou avançar a página).
+- **Outros botões** podem fazer qualquer uma das duas funções: voltar, avançar
+  ou o botão do meio (apertar a roda).
 
 <!--
   GIF: o anel. Salve como docs/media/ring.gif e troque este comentário por
@@ -29,8 +31,9 @@ versão está no [changelog](CHANGELOG.md) (em inglês).
 
 ## Instalação
 
-O Thumbring roda no Windows 10 e 11 (64 bits) e funciona com qualquer mouse que
-tenha os dois botões laterais, voltar e avançar.
+O Thumbring roda no Windows 10 e 11 (64 bits). Por padrão, ele usa os dois
+botões laterais do mouse, voltar e avançar; num mouse sem eles, o botão do meio
+pode fazer os gestos ou abrir o anel (veja "Configuração").
 
 1. Baixe a versão mais recente na
    [página de Releases](https://github.com/iglesiaskun/thumbring/releases/latest):
@@ -63,7 +66,8 @@ configuração e o log continuam em `%APPDATA%\thumbring` e
 
 ## Como usar
 
-Segure o botão voltar do mouse, arraste uns 3 cm e solte:
+Segure o botão voltar do mouse, arraste uns 3 cm e solte (os botões podem ser
+trocados; veja "Configuração"):
 
 | Gesto | Padrão |
 |---|---|
@@ -116,6 +120,7 @@ Um arquivo sem ela conta como versão 1.
 version = 1
 
 [gestures]
+button = "back"             # "back", "forward" ou "middle"
 up = "Win+Tab"
 down = "Win+D"
 left = "Ctrl+Win+Right"
@@ -134,6 +139,14 @@ apps = ["browser.exe"]      # o executável do seu navegador
 gestures = { left = "Ctrl+Tab", right = "Ctrl+Shift+Tab" }
 ```
 
+`button` em `[gestures]` é o botão que faz os gestos, e `button` em `[ring]`,
+o que abre o anel: `"back"` (voltar), `"forward"` (avançar) ou `"middle"`
+(apertar a roda). Sem mudar nada, são o voltar e o avançar. Um botão não faz
+as duas coisas: se os dois apontarem para o mesmo botão, os dois voltam ao
+padrão, com um aviso. Com o anel desligado, os gestos podem usar o botão dele.
+O toque rápido, assim como o comando `"native"`, envia o clique do botão que
+foi segurado.
+
 Comandos, iguais para gestos e ações do anel:
 
 | Texto | Faz |
@@ -150,7 +163,7 @@ O anel é configurado no mesmo arquivo, que já vem com o anel padrão escrito
 por extenso. São 8 slots, começando no topo, em sentido horário; cada um tem
 uma ação, uma pasta com até 9 ações ou nada (`type = "empty"`). O que for
 salvo vale na próxima vez que o anel abrir. Para desligar o anel e manter o
-botão avançar como sempre foi, deixe a lista vazia: `slots = []` em `[ring]`.
+botão dele como sempre foi, deixe a lista vazia: `slots = []` em `[ring]`.
 
 Ícones: `calculator`, `calendar`, `clipboard`, `clipboard-list`,
 `clipboard-paste`, `code`, `copy`, `folder-open`, `globe`, `headphones`,
@@ -169,6 +182,9 @@ speed = 1.0           # 0.5 a 2.0
 open_with = "hold"    # ou "tap"
 hold_to_open_ms = 150
 path_tolerance_ms = 50
+
+[ring]
+button = "forward"    # "forward", "back" ou "middle"
 
 [[ring.slots]]
 type = "action"
@@ -216,7 +232,7 @@ seu próximo login, sem a janela do UAC. Se isso preocupa você, deixe a opção
 desligada, ou descompacte o `.zip` numa pasta que só administradores podem
 alterar, como `C:\Program Files\Thumbring`, e ligue a opção pelo Thumbring
 dessa pasta. Pelo mesmo motivo, enquanto tem permissão de administrador, o
-Thumbring ignora o voltar e o avançar que outros programas simulam, como
+Thumbring ignora os botões do mouse que outros programas simulam, como
 ferramentas de acesso remoto ou programas que remapeiam os botões do mouse:
 só os botões de verdade fazem gestos e abrem o anel.
 
@@ -255,8 +271,10 @@ Não. Ele não faz nenhuma conexão de rede. O log fica no seu computador; ele
 lista os nomes dos apps que ganham o foco, o que ajuda a escrever perfis.
 
 **Funciona com o meu mouse?**
-Com qualquer mouse que tenha os dois botões laterais, voltar e avançar (às
-vezes chamados de botões 4 e 5).
+Sim. Por padrão, o Thumbring usa os dois botões laterais, voltar e avançar (às
+vezes chamados de botões 4 e 5). Num mouse sem eles, escreva
+`button = "middle"` em `[gestures]` ou em `[ring]` no arquivo de configuração,
+e apertar a roda faz os gestos ou abre o anel.
 
 **Como mudo os gestos ou o anel?**
 Botão direito no ícone da bandeja > Open settings file, edite e salve. O

@@ -21,6 +21,12 @@ changed.
   Forward presses simulated by other programs are ignored, so a program
   without those rights cannot use Thumbring to reach windows that have them.
   It and "Start with Windows" exclude each other.
+- Choose which mouse button runs the gestures and which opens the ring: Back,
+  Forward or the middle button (pressing the wheel), with `button` under
+  `[gestures]` and under `[ring]` in the settings file. Back and Forward stay
+  the defaults, so older settings files work as before. A quick tap, and the
+  `"native"` command in a gesture or a ring action, send the click of the
+  button that was held.
 
 ### Changed
 

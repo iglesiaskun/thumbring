@@ -11,23 +11,26 @@ use std::time::Duration;
 
 use thumbring_core::apps::{Activity, AppName, Foreground};
 use thumbring_core::command::Command;
-use thumbring_core::config::Config;
+use thumbring_core::config::{Config, MouseButton};
 use thumbring_core::gesture::{Direction, Outcome, Point, Tracker};
 
 use crate::foreground::{self, Resolver};
 use crate::hook::{self, HookEvent};
 use crate::log::{error, info, warning};
 use crate::ring::controller::{self, Input};
-use crate::{actions, dpi, input, tray};
+use crate::{actions, dpi, tray};
 
 pub enum Msg {
     Hook(HookEvent),
     /// The focused window changed (the HWND as a number).
     Foreground(usize),
     Config(Box<Config>),
-    /// Command picked on the ring (or the native Forward click, for a quick
-    /// tap), to run now.
-    RingCommand(Command),
+    /// Command picked on the ring (or "native", for a quick tap), to run now.
+    /// `button` is the one that opened the ring: "native" sends its click.
+    RingCommand {
+        command: Command,
+        button: MouseButton,
+    },
     TogglePause,
     Quit,
 }
@@ -38,8 +41,10 @@ pub enum Msg {
 /// after the taskbar or a virtual desktop switch had it for a moment.
 const POLL: Duration = Duration::from_millis(250);
 
-/// Gesture in progress, from pressing Back to releasing it.
+/// Gesture in progress, from pressing the gesture button to releasing it.
 struct Pressed {
+    /// The button held: "native" sends its click.
+    button: MouseButton,
     tracker: Tracker,
     down_time: u32,
     /// Were gestures on at the press? If not, the hook had not been removed
@@ -59,7 +64,7 @@ struct Worker {
     /// `None` until the first decision.
     activity: Option<Activity>,
     pressed: Option<Pressed>,
-    /// `None` if the ring could not start: the Forward button keeps its own
+    /// `None` if the ring could not start: the ring button keeps its own
     /// function.
     ring: Option<controller::Handle>,
 }
@@ -75,6 +80,7 @@ pub fn run(events: Receiver<Msg>, config: Config, ring: Option<controller::Handl
         pressed: None,
         ring,
     };
+    worker.assign_buttons();
     worker.enable_ring();
     worker.refresh(foreground::current());
     loop {
@@ -92,7 +98,12 @@ impl Worker {
             Msg::Hook(event) => self.on_hook(event),
             Msg::Foreground(window) => self.refresh(window),
             Msg::Config(config) => {
+                let buttons = |c: &Config| (c.gestures.button, c.ring.button);
+                let new_buttons = buttons(&config) != buttons(&self.config);
                 self.config = *config;
+                if new_buttons {
+                    self.assign_buttons();
+                }
                 self.send_ring(Input::Settings(Box::new(controller::Settings::of(
                     &self.config,
                 ))));
@@ -100,16 +111,7 @@ impl Worker {
                 // The exclusion list and the fullscreen option may have changed.
                 self.refresh(self.window);
             }
-            Msg::RingCommand(command) => {
-                // For the ring, the native click is the Forward button's.
-                let result = match &command {
-                    Command::Native => input::click_forward(),
-                    other => actions::run(other),
-                };
-                if let Err(e) = result {
-                    warning!("the command \"{command}\" failed: {e}");
-                }
-            }
+            Msg::RingCommand { command, button } => execute(&command, button),
             Msg::TogglePause => {
                 self.paused = !self.paused;
                 self.refresh(foreground::current());
@@ -179,7 +181,7 @@ impl Worker {
 
     fn on_hook(&mut self, event: HookEvent) {
         match event {
-            HookEvent::BackDown { pos, time } => {
+            HookEvent::GestureDown { button, pos, time } => {
                 // The gesture belongs to the app focused right now, even if
                 // Windows has not reported the last focus change yet.
                 let window = foreground::current();
@@ -188,6 +190,7 @@ impl Worker {
                 }
                 let threshold = f64::from(self.config.gestures.threshold_px) * dpi::scale_at(pos);
                 self.pressed = Some(Pressed {
+                    button,
                     tracker: Tracker::new(pos, threshold),
                     down_time: time,
                     active: self.activity.as_ref().is_some_and(Activity::is_active),
@@ -200,13 +203,13 @@ impl Worker {
                 }
                 self.send_ring(Input::Moved(pos));
             }
-            HookEvent::BackUp { pos, time } => {
+            HookEvent::GestureUp { pos, time } => {
                 if let Some(p) = self.pressed.take() {
                     self.release(p, pos, time);
                 }
             }
-            HookEvent::ForwardDown => self.send_ring(Input::TriggerDown),
-            HookEvent::ForwardUp => self.send_ring(Input::TriggerUp),
+            HookEvent::TriggerDown { button } => self.send_ring(Input::TriggerDown(button)),
+            HookEvent::TriggerUp => self.send_ring(Input::TriggerUp),
             HookEvent::Click { button, pos } => self.send_ring(Input::Click { button, pos }),
             HookEvent::Esc => self.send_ring(Input::Esc),
             HookEvent::Installed => info!("mouse hook installed again"),
@@ -223,7 +226,15 @@ impl Worker {
         }
     }
 
-    /// The Forward button opens the ring only when the ring has items.
+    /// Tells the hook which buttons do what. It takes them at the next press
+    /// with no button held and the ring closed.
+    fn assign_buttons(&self) {
+        let (gestures, ring) = (self.config.gestures.button, self.config.ring.button);
+        info!("buttons: gestures = {gestures}, ring = {ring}");
+        hook::set_buttons(gestures, ring);
+    }
+
+    /// The ring button opens the ring only when the ring has items.
     fn enable_ring(&self) {
         hook::set_ring_enabled(self.ring.is_some() && !self.config.ring.is_empty());
     }
@@ -239,7 +250,7 @@ impl Worker {
 
         if !p.active {
             info!("button pressed while gestures were off: native click sent again");
-            execute(&Command::Native);
+            execute(&Command::Native, p.button);
             return;
         }
         let (dx, dy) = (pos.x - origin.x, pos.y - origin.y);
@@ -249,15 +260,16 @@ impl Worker {
                     "{} in {app}: {command}  (dx {dx:+}, dy {dy:+}, {held_ms} ms)",
                     label(outcome)
                 );
-                execute(command);
+                execute(command, p.button);
             }
             None => info!("{} in {app} ({held_ms} ms)", label(outcome)),
         }
     }
 }
 
-fn execute(command: &Command) {
-    if let Err(e) = actions::run(command) {
+/// `button` is the one that asked for the command: "native" sends its click.
+fn execute(command: &Command, button: MouseButton) {
+    if let Err(e) = actions::run(command, button) {
         warning!("the command \"{command}\" failed: {e}");
     }
 }

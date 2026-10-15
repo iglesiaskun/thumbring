@@ -24,7 +24,7 @@ use std::time::Instant;
 
 use thumbring_core::anim::Timing;
 use thumbring_core::command::Command;
-use thumbring_core::config::{Animation, Behavior, Config};
+use thumbring_core::config::{Animation, Behavior, Config, MouseButton};
 use thumbring_core::gesture::Point;
 use thumbring_core::layout::{Geometry, OpenFolder, Vec2};
 use thumbring_core::ring::{Action, Ring, Slot};
@@ -86,7 +86,8 @@ impl Settings {
 
 /// What the worker sends to the ring.
 pub enum Input {
-    TriggerDown,
+    /// The ring button was pressed: this one.
+    TriggerDown(MouseButton),
     TriggerUp,
     Moved(Point),
     /// A click the hook blocked because the ring is open.
@@ -195,6 +196,7 @@ fn run(
     warm_up(&mut overlay, &settings.ring);
 
     let mut controller = Controller {
+        trigger: settings.ring.button,
         settings,
         next_settings: None,
         overlay: Some(overlay),
@@ -304,8 +306,11 @@ struct Controller {
     hold_at: Option<f64>,
     /// The path tolerance timer: slot and when it fires.
     intent: Option<(u8, f64)>,
-    /// Command picked on the ring, to run once the ring is off the screen.
-    pending: Option<Command>,
+    /// The button that opened the ring: "native" sends its click.
+    trigger: MouseButton,
+    /// Command picked on the ring, to run once the ring is off the screen,
+    /// with the button that opened that ring.
+    pending: Option<(Command, MouseButton)>,
     cursor: Point,
     /// Something changed on the screen: draw a frame.
     redraw: bool,
@@ -345,7 +350,10 @@ impl Controller {
     fn handle(&mut self, input: Input) {
         let now = self.now();
         match input {
-            Input::TriggerDown => self.dispatch(Event::TriggerDown, now),
+            Input::TriggerDown(button) => {
+                self.trigger = button;
+                self.dispatch(Event::TriggerDown, now);
+            }
             Input::TriggerUp => self.dispatch(Event::TriggerUp, now),
             Input::Moved(pos) => self.cursor = pos,
             Input::Click { button, pos } => {
@@ -357,7 +365,9 @@ impl Controller {
                     Button::Left => self.hit(now),
                     // Only the left button picks. The others count as a click
                     // outside the ring, which closes it.
-                    Button::Right | Button::Middle => Target::Outside,
+                    Button::Right | Button::Middle | Button::Back | Button::Forward => {
+                        Target::Outside
+                    }
                 };
                 self.dispatch(Event::Click(target), now);
             }
@@ -404,8 +414,11 @@ impl Controller {
             }
             Effect::CancelIntent => self.intent = None,
             Effect::PassNative => {
-                info!("quick tap on Forward: native click sent again");
-                let _ = self.worker.send(Msg::RingCommand(Command::Native));
+                info!("quick tap on the ring button: native click sent again");
+                let _ = self.worker.send(Msg::RingCommand {
+                    command: Command::Native,
+                    button: self.trigger,
+                });
             }
             Effect::Execute(target) => match action_of(&self.settings.ring, target) {
                 Some(Action {
@@ -414,7 +427,7 @@ impl Controller {
                     ..
                 }) => {
                     info!("ring: {name} ({command})");
-                    self.pending = Some(command.clone());
+                    self.pending = Some((command.clone(), self.trigger));
                 }
                 Some(action) => info!("ring: {} has no command", action.name),
                 None => {}
@@ -664,8 +677,8 @@ impl Controller {
         if let Some(open) = self.open.take() {
             open.frames.report();
         }
-        if let Some(command) = self.pending.take() {
-            let _ = self.worker.send(Msg::RingCommand(command));
+        if let Some((command, button)) = self.pending.take() {
+            let _ = self.worker.send(Msg::RingCommand { command, button });
         }
         self.apply_settings();
     }

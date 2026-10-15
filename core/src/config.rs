@@ -80,9 +80,24 @@ impl Config {
     }
 }
 
-/// `[gestures]` section: what each Back button gesture does.
+/// A mouse button that can run the gestures or open the ring.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MouseButton {
+    /// The side button that goes back (button 4).
+    Back,
+    /// The side button that goes forward (button 5).
+    Forward,
+    /// The wheel button.
+    Middle,
+}
+
+/// `[gestures]` section: the button that runs the gestures and what each
+/// gesture does.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Gestures {
+    /// Never the same as the ring button while the ring has items.
+    pub button: MouseButton,
     pub up: Command,
     pub down: Command,
     pub left: Command,
@@ -113,6 +128,7 @@ impl Default for Gestures {
         let keys = |modifiers, key| Command::Keys(Chord::new(modifiers, key));
         let ctrl_win = Modifiers::CTRL.with(Modifiers::WIN);
         Self {
+            button: MouseButton::Back,
             up: keys(Modifiers::WIN, Key::Tab),
             down: keys(Modifiers::WIN, Key::Char('D')),
             // Like pushing the screen aside: dragging right brings the

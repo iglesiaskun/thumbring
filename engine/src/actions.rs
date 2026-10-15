@@ -10,6 +10,7 @@ use std::path::Path;
 use std::thread;
 
 use thumbring_core::command::{Builtin, Command, Open};
+use thumbring_core::config::MouseButton;
 use windows::Win32::Foundation::S_FALSE;
 use windows::Win32::System::Com::{
     CLSCTX_LOCAL_SERVER, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE, CoCreateInstance,
@@ -31,9 +32,11 @@ use crate::log::warning;
 use crate::tray::{self, Notice};
 use crate::{elevation, input, text};
 
-pub fn run(command: &Command) -> Result<(), String> {
+/// Runs `command`. `button` is the one that asked for it: "native" sends its
+/// own click again.
+pub fn run(command: &Command, button: MouseButton) -> Result<(), String> {
     match command {
-        Command::Native => input::click_back(),
+        Command::Native => input::click(button),
         Command::Nothing => Ok(()),
         Command::Keys(chord) => input::send_chord(chord),
         // Windows ignores a simulated Win+L (it is a secure key combination).
