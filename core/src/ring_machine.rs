@@ -122,7 +122,7 @@ pub enum Effect {
     CancelHold,
     /// Quick tap: pass the trigger's native click on.
     PassNative,
-    /// Released away from the center: the ring stays open, in click mode.
+    /// Released without running anything: the ring stays open, in click mode.
     StayOpen,
     /// Swallow the trigger release, because the ring handled the press.
     SwallowUp,
@@ -211,8 +211,13 @@ pub fn reduce(s: State, event: Event, cfg: &Behavior) -> (State, Vec<Effect>) {
                     },
                     vec![CancelHold, PassNative],
                 ),
+                // Only quick mode acts on the release: over an action it runs
+                // it, over the center it closes. Otherwise the ring stays
+                // open, even over the center, which closes with a click.
                 Phase::OpenHeld => match s.hover {
-                    Some(Target::Center) => close(t, CloseReason::Center, vec![]),
+                    Some(Target::Center) if cfg.execute_on_release => {
+                        close(t, CloseReason::Center, vec![])
+                    }
                     Some(h) if h.is_runnable() && cfg.execute_on_release => {
                         close(t, CloseReason::Execute, vec![Execute(h)])
                     }

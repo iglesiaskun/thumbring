@@ -82,7 +82,9 @@ excluded = []
 hold_to_open_ms = 150       # 60 to 1000
 path_tolerance_ms = 50      # 0 to 1000
 open_with = "hold"          # "hold" or "tap"
-execute_on_release = false  # quick mode: releasing over an action runs it
+# Quick mode: releasing the button over an action runs it, and releasing it
+# on the center closes the ring. Off, releasing leaves the ring open anywhere.
+execute_on_release = false
 
 # Ring animations.
 [animation]
@@ -113,7 +115,7 @@ item_opacity = 0.96               # 0.3 to 1; the highlight is always solid
 icon_color = "#2A2B31"
 highlight_color = "#121214"       # item under the cursor, open folder, blob
 highlight_icon_color = "#FFFFFF"
-cancel_color = "#E64054"          # center button when releasing there closes
+cancel_color = "#E64054"          # center button under the cursor: it closes
 item_size_px = 52                 # item diameter at 100% scaling, 32 to 96
 # Distance from the ring center to each item, at 100% scaling. Without it,
 # it is 1.8 times item_size_px; it goes from 1.5 to 3 times item_size_px.

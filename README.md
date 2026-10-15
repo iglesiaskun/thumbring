@@ -76,11 +76,14 @@ changed; see "Configuration"):
 | Quick tap | Back, as usual |
 
 Hold the Forward button for a moment: the ring opens around the cursor. Point
-at an item and click it, or release Forward and click afterwards. A folder
-opens when the cursor rests on it. A click outside the ring, a right click,
-Esc, Forward again or switching windows closes it without running anything.
-While the ring is open, clicks and the mouse wheel never reach the window
-below.
+at an item and click it, or release Forward and click afterwards: the ring
+stays open wherever you release it, even on the center. A folder opens when
+the cursor rests on it. A click on the × in the center, a click outside the
+ring, a right click, Esc, Forward again or switching windows closes it without
+running anything. While the ring is open, clicks and the mouse wheel never
+reach the window below. In quick mode (`execute_on_release = true` under
+`[behavior]`), releasing over an action runs it and releasing on the center
+closes the ring.
 
 | Default ring (clockwise from the top) | Does |
 |---|---|
@@ -185,7 +188,7 @@ item_opacity = 0.96               # 0.3 to 1; the highlight is always solid
 icon_color = "#2A2B31"
 highlight_color = "#121214"       # item under the cursor, open folder, blob
 highlight_icon_color = "#FFFFFF"
-cancel_color = "#E64054"          # center button when releasing there closes
+cancel_color = "#E64054"          # center button under the cursor: it closes
 item_size_px = 52                 # item diameter at 100% scaling, 32 to 96
 ring_radius_px = 93.6             # distance from the center to each item
 shadow = true                     # soft shadow around the items

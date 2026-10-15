@@ -40,6 +40,10 @@ changed.
 ### Changed
 
 - Uninstalling the `.msi` also stops Thumbring from starting with Windows.
+- Releasing the ring button with the cursor on the center leaves the ring
+  open, as releasing it anywhere else does, so it no longer closes by
+  accident. A click on the center (×) closes it. In quick mode
+  (`execute_on_release = true`), releasing on the center still closes it.
 
 ### Fixed
 

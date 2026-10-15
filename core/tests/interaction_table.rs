@@ -52,7 +52,7 @@ fn open_held() -> Ring {
     r
 }
 
-/// Ring open in click mode (the trigger was released away from the center).
+/// Ring open in click mode (the trigger was released without running anything).
 fn open_click() -> Ring {
     let mut r = open_held();
     r.send(TriggerUp);
@@ -101,19 +101,11 @@ fn hold_timer_after_release_is_ignored() {
     assert_eq!(r.phase(), Phase::Idle);
 }
 
-/// "Release on the center": closes with no action.
+/// "Release anywhere, the center too": the ring stays open in click mode. A
+/// click on the center (×) closes it.
 #[test]
-fn release_on_center_closes_without_action() {
-    let mut r = open_held();
-    r.send(Pointer(Target::Center));
-    assert_eq!(r.send(TriggerUp), [CloseRing(CloseReason::Center)]);
-    assert_eq!(r.state, State::default());
-}
-
-/// "Release over an action, folder or empty area": the ring stays open in click mode.
-#[test]
-fn release_elsewhere_keeps_the_ring_open_in_click_mode() {
-    for target in [ACTION, FOLDER, Target::Gap, Target::Outside] {
+fn release_keeps_the_ring_open_in_click_mode() {
+    for target in [Target::Center, ACTION, FOLDER, Target::Gap, Target::Outside] {
         let mut r = open_held();
         r.send(Pointer(target));
         assert_eq!(r.send(TriggerUp), [StayOpen], "released over {target:?}");
@@ -138,6 +130,20 @@ fn release_elsewhere_keeps_the_ring_open_in_click_mode() {
 fn execute_on_release_is_off_by_default() {
     assert!(!Behavior::default().execute_on_release);
     assert_eq!(Behavior::default().open_with, OpenWith::Hold);
+}
+
+/// Quick mode: releasing over the center closes with no action.
+#[test]
+fn quick_mode_release_on_center_closes_without_action() {
+    let mut r = Ring::with(Behavior {
+        execute_on_release: true,
+        ..Behavior::default()
+    });
+    r.send(TriggerDown);
+    r.send(HoldElapsed);
+    r.send(Pointer(Target::Center));
+    assert_eq!(r.send(TriggerUp), [CloseRing(CloseReason::Center)]);
+    assert_eq!(r.state, State::default());
 }
 
 /// Quick mode: releasing over an action runs it; over the folder, it stays open.

@@ -361,7 +361,8 @@ pub struct Appearance {
     /// The item under the cursor, the open folder and the blob.
     pub highlight_color: Color,
     pub highlight_icon_color: Color,
-    /// The center button, when releasing there would close the ring.
+    /// The center button under the cursor: a click there closes the ring,
+    /// and so does releasing there in quick mode.
     pub cancel_color: Color,
     /// Item diameter, in pixels at 100% scaling. The center button follows
     /// it.

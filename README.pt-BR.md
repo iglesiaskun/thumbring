@@ -78,10 +78,13 @@ trocados; veja "Configuração"):
 | Toque rápido | voltar, como sempre |
 
 Segure o botão avançar por um instante: o anel abre ao redor do cursor.
-Aponte para um item e clique, ou solte o avançar e clique depois. Uma pasta
-abre quando o cursor para nela. Clique fora do anel, botão direito, Esc,
-avançar de novo ou trocar de janela fecham o anel sem fazer nada. Com o anel
-aberto, cliques e a roda do mouse nunca chegam à janela de baixo.
+Aponte para um item e clique, ou solte o avançar e clique depois: o anel
+continua aberto onde quer que você solte, até no centro. Uma pasta abre quando
+o cursor para nela. Clique no × do centro, clique fora do anel, botão direito,
+Esc, avançar de novo ou trocar de janela fecham o anel sem fazer nada. Com o
+anel aberto, cliques e a roda do mouse nunca chegam à janela de baixo. No modo
+rápido (`execute_on_release = true` em `[behavior]`), soltar sobre uma ação
+executa e soltar no centro fecha o anel.
 
 | Anel padrão (sentido horário, a partir do topo) | Faz |
 |---|---|
@@ -190,7 +193,7 @@ item_opacity = 0.96               # 0.3 a 1; o destaque é sempre sólido
 icon_color = "#2A2B31"
 highlight_color = "#121214"       # item sob o cursor, pasta aberta, gota
 highlight_icon_color = "#FFFFFF"
-cancel_color = "#E64054"          # botão central quando soltar ali fecha
+cancel_color = "#E64054"          # botão central sob o cursor: ele fecha
 item_size_px = 52                 # diâmetro do item a 100% de escala, 32 a 96
 ring_radius_px = 93.6             # distância do centro até cada item
 shadow = true                     # sombra suave em volta dos itens
