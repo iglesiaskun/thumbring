@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::Value as Json;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use thumbring_settings::apps::{self, RunningApp};
 use thumbring_settings::session::{OpenError, SaveError, Session, Snapshot};
 use thumbring_settings::{file, icons};
 
@@ -67,6 +68,18 @@ async fn browse(window: WebviewWindow, kind: String) -> Option<String> {
     };
     let path = picked?.into_path().ok()?;
     Some(path.display().to_string())
+}
+
+/// The apps with a window on the screen now, to pick from.
+#[tauri::command]
+fn running_apps() -> Vec<RunningApp> {
+    apps::running_apps()
+}
+
+/// The name of an app as the settings file writes it, from a name or a path.
+#[tauri::command]
+fn app_name(text: String) -> Option<String> {
+    apps::app_name(&text)
 }
 
 /// The ring's icons, as name and SVG text, in the engine's order.
@@ -162,6 +175,8 @@ fn main() -> ExitCode {
             open_settings,
             save_settings,
             ring_icons,
+            running_apps,
+            app_name,
             browse,
             set_dirty,
             ready,

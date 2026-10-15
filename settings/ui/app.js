@@ -6,11 +6,14 @@ import { canRedo, canUndo, change, dirty, onChange, redo, reset, store, undo } f
 import { loadRingIcons } from './js/ring-icons.js';
 import { invoke, listen } from './js/system.js';
 import * as ring from './js/pages/ring.js';
+import * as gestures from './js/pages/gestures.js';
+import * as apps from './js/pages/apps.js';
 import * as behavior from './js/pages/behavior.js';
 
 // Each page: id, title, icon, icons (the ones it draws), mount(root) once,
-// render(root) after every change, and shown(root) when it comes on screen.
-const PAGES = [ring, behavior];
+// render(root) after every change and shown(root) when it comes on screen.
+// A page may also list problems() to fix before saving, and reveal(problem).
+const PAGES = [ring, gestures, apps, behavior];
 const ICONS = ['circle-alert', 'undo-2', 'redo-2', ...PAGES.flatMap(p => [p.icon, ...(p.icons ?? [])])];
 
 let page = PAGES[0];
@@ -113,7 +116,23 @@ async function open() {
   return true;
 }
 
+/** Problems the pages know about, shown before the engine's own check. */
+async function fixFirst() {
+  const issues = PAGES.flatMap(p => (p.problems?.() ?? []).map(issue => ({ ...issue, page: p })));
+  if (!issues.length) return false;
+  await dialog({
+    title: 'Fix these first',
+    body: `<ul>${issues.map(i => `<li>${esc(i.message)}</li>`).join('')}</ul>`,
+    buttons: [{ label: 'Show me', primary: true, value: 'show' }],
+  });
+  const first = issues[0];
+  first.page.reveal?.(first);
+  show(first.page);
+  return true;
+}
+
 async function save(overwrite = false) {
+  if (await fixFirst()) return false;
   try {
     reset(await invoke('save_settings', { settings: store.settings, overwrite }));
     showWarnings();
@@ -191,6 +210,10 @@ async function start() {
   });
   listen('close-requested', askBeforeClosing);
   $('#content').addEventListener('scroll', () => closePop(), { passive: true });
+  window.addEventListener('thumbring:goto', e => {
+    const next = PAGES.find(p => p.id === e.detail);
+    if (next && mounted) show(next);
+  });
   await loadRingIcons(invoke);
   // The pages need the settings to build themselves.
   if (!await open()) return;

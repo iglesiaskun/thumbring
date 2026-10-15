@@ -249,3 +249,12 @@ fn a_list_of_apps_is_replaced() {
         [r#"excluded = ["game.exe", "remote.exe"]"#]
     );
 }
+
+#[test]
+fn a_new_profile_without_gestures_is_accepted() {
+    // The interface creates a profile with no gestures changed yet.
+    let out = edited(&template(), |s| {
+        s["profiles"] = json!([{ "name": "Editors", "apps": ["editor.exe"], "gestures": {} }]);
+    });
+    assert!(has_line(&out, "[[profiles]]"));
+}

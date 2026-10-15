@@ -7,6 +7,9 @@ export const $$ = (selector, root = document) => Array.from(root.querySelectorAl
 /** Text for HTML. Everything that comes from the settings goes through it. */
 export const esc = text => String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/** Shows another page: 'ring', 'gestures', 'apps' or 'behavior'. */
+export const goto = page => window.dispatchEvent(new CustomEvent('thumbring:goto', { detail: page }));
+
 /** Focus is in a text field, where keys type instead of acting. */
 export const isTyping = () =>
   !!document.activeElement?.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select');

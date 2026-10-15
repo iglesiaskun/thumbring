@@ -64,6 +64,26 @@ const pickAction = s => {
   return a;
 };
 
+/** Items without a name: the engine would leave them out. */
+export function problems() {
+  const out = [];
+  slots().forEach((s, i) => {
+    if (s.type === 'empty') return;
+    if (!s.name.trim()) out.push({ message: `The ${s.type} in the ${SLOT_POS[i]} slot needs a name.`, at: { slot: i } });
+    if (s.type === 'folder') {
+      s.items.forEach((it, j) => {
+        if (!it.name.trim()) out.push({ message: `Action ${j + 1} in ${s.name || 'a folder'} needs a name.`, at: { slot: i, index: j } });
+      });
+    }
+  });
+  return out;
+}
+
+/** Selects the item a problem is about. */
+export function reveal(problem) {
+  sel = problem.at;
+}
+
 /* ---------- Page ---------- */
 
 export function mount(pageRoot) {

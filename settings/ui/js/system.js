@@ -8,3 +8,9 @@ export const listen = (event, fn) => window.__TAURI__.event.listen(event, fn);
  * 'file' or 'folder'. Resolves with the path, or null when cancelled.
  */
 export const browse = kind => invoke('browse', { kind });
+
+/** The apps with a window on the screen now: [{ exe, title }]. */
+export const runningApps = () => invoke('running_apps');
+
+/** The name of an app as the settings file writes it (`browser.exe`), or null. */
+export const appName = text => invoke('app_name', { text });
