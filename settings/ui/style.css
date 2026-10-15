@@ -1,0 +1,195 @@
+/* Thumbring Settings: a Windows 11 settings window. Pages on the right of a
+   navigation pane, and a bar at the bottom to save. The colors follow the
+   Windows light or dark mode. */
+
+:root {
+  --win: #F3F4F7;
+  --hover: rgba(20, 22, 30, 0.05);
+  --on: rgba(20, 22, 30, 0.075);
+  --card: #FCFCFD;
+  --card-2: #F4F5F8;
+  --field: #FFFFFF;
+  --ink: #1A1B20;
+  --ink-2: #5A5F6E;
+  --ink-3: #8F94A1;
+  --line: #E1E3E9;
+  --line-2: #C8CBD4;
+  /* Primary actions, switches and sliders: the near-black of the ring's highlight. */
+  --fill: #1A1B20;
+  --fill-ink: #FFFFFF;
+  --accent: #2F5BD3;
+  --accent-soft: rgba(47, 91, 211, 0.12);
+  --ok: #17784A;
+  --warn: #9A520C;
+  --bad: #C2283A;
+  --bad-soft: rgba(194, 40, 58, 0.1);
+  --pop-shadow: 0 12px 32px rgba(18, 22, 38, 0.18), 0 1px 3px rgba(18, 22, 38, 0.1);
+  --scrim: rgba(12, 14, 20, 0.32);
+  --font-app: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-head: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --win: #1D1E23; --hover: rgba(255, 255, 255, 0.05); --on: rgba(255, 255, 255, 0.085);
+    --card: #282930; --card-2: #2F3038; --field: #202126;
+    --ink: #ECEDF1; --ink-2: #A6AAB6; --ink-3: #6D717D; --line: #33353D; --line-2: #4A4D58;
+    --fill: #F1F2F5; --fill-ink: #16171B;
+    --accent: #8EA9FF; --accent-soft: rgba(142, 169, 255, 0.16);
+    --ok: #4CC48B; --warn: #EFA35D; --bad: #FF7D89; --bad-soft: rgba(255, 125, 137, 0.12);
+    --pop-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    --scrim: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--win); color: var(--ink);
+  font-family: var(--font-app); font-size: 14px; line-height: 1.45;
+  /* A settings window, not a document: labels are not selectable. */
+  user-select: none; -webkit-user-select: none;
+}
+input, textarea { user-select: text; -webkit-user-select: text; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; color: inherit; }
+code { font-family: var(--font-mono); font-size: 12.5px; }
+.ui { width: 16px; height: 16px; flex: none; }
+.muted { color: var(--ink-2); }
+
+/* ---------- Window ---------- */
+/* Named rows: the banner is usually hidden, and the save bar must still sit in
+   the last row, at the bottom of the window, whatever the page height. */
+.app { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "banner" "body" "savebar"; height: 100%; position: relative; }
+.banner { grid-area: banner; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; font-size: 13.5px; background: color-mix(in srgb, var(--warn) 13%, var(--win)); border-bottom: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
+.banner > .ui { color: var(--warn); }
+.banner .bt { flex: 1; min-width: 220px; }
+.body { grid-area: body; display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 0; }
+.nav { display: flex; flex-direction: column; gap: 2px; padding: 12px 8px; min-height: 0; }
+.nav-app { display: flex; align-items: center; gap: 12px; padding: 6px 10px 18px; }
+.mark { width: 36px; height: 36px; flex: none; }
+.nav-app b { display: block; font-family: var(--font-head); font-size: 15px; font-weight: 600; }
+.nav-app span { font-size: 12px; color: var(--ink-2); }
+.nav-pages { display: flex; flex-direction: column; gap: 2px; }
+.nv { position: relative; display: flex; align-items: center; gap: 14px; padding: 9px 12px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; font-size: 14px; }
+.nv:hover { background: var(--hover); }
+.nv[aria-current="page"] { background: var(--on); font-weight: 600; }
+.nv[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 16px; margin-top: -8px; border-radius: 2px; background: var(--fill); }
+.nv .ui { width: 18px; height: 18px; stroke-width: 1.75; }
+.content { overflow-y: auto; min-height: 0; padding: 8px 28px 28px 22px; }
+.ph { padding-block: 6px 16px; }
+.ph h1 { margin: 0; font-family: var(--font-head); font-size: 28px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+.ph p { margin: 4px 0 0; color: var(--ink-2); max-width: 66ch; }
+.sect { margin: 22px 0 8px; font-size: 14px; font-weight: 600; }
+.sect:first-child { margin-top: 0; }
+
+/* ---------- Controls ---------- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.card > * + * { border-top: 1px solid var(--line); }
+.row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; padding: 13px 16px; min-height: 62px; }
+.row-text { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; }
+.row-title { font-size: 14px; }
+.row-desc { font-size: 12.5px; color: var(--ink-2); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 32px; padding: 5px 12px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--line-2); background: var(--card); color: var(--ink); font-size: 14px;
+}
+.btn:hover { background: var(--card-2); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--fill); border-color: var(--fill); color: var(--fill-ink); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { opacity: 0.88; }
+.btn.subtle { border-color: transparent; background: transparent; }
+.btn.subtle:hover:not(:disabled) { background: var(--hover); }
+.btn.icon { width: 32px; padding: 0; }
+.btn.sm { min-height: 28px; padding: 3px 10px; font-size: 13px; }
+.switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 40px; height: 20px; margin: 0; border-radius: 10px; border: 1px solid var(--ink-2); background: transparent; cursor: pointer; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink-2); transition: transform 0.15s; }
+.switch:checked { background: var(--fill); border-color: var(--fill); }
+.switch:checked::after { transform: translateX(20px); background: var(--fill-ink); }
+.switch:disabled { opacity: 0.4; cursor: default; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--field); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 13.5px; }
+.seg input:checked + label { background: var(--fill); color: var(--fill-ink); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
+.srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 13px 16px; }
+.srow label { font-size: 14px; }
+.srow output { font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.srow output.changed { font-weight: 600; }
+.srow input[type="range"] { grid-column: 1 / -1; width: 100%; margin: 6px 0 2px; accent-color: var(--fill); }
+.srow small { grid-column: 1 / -1; color: var(--ink-2); font-size: 12.5px; }
+
+.row-ic { width: 20px; height: 20px; color: var(--ink-2); flex: none; }
+.row-ic .ui { width: 20px; height: 20px; stroke-width: 1.75; }
+.btnchip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 6px; background: var(--card-2); border: 1px solid var(--line); font-weight: 600; font-size: 13px; }
+.btnchip .ui { width: 15px; height: 15px; }
+
+/* Choosing a mouse button by pressing it over the drawing. */
+.cap-pad { display: flex; align-items: center; gap: 20px; padding: 18px; border-radius: 10px; border: 1px dashed var(--line-2); background: var(--field); color: var(--ink); }
+.cap-pad svg { width: 92px; height: auto; flex: none; }
+.m-body { fill: var(--card-2); stroke: var(--line-2); stroke-width: 1.5; }
+.m-zone { fill: transparent; }
+.m-line { stroke: var(--line-2); stroke-width: 1.5; fill: none; }
+.m-btn { fill: var(--card); stroke: var(--ink-3); stroke-width: 1.5; }
+.m-hit { fill: var(--accent); stroke: var(--accent); }
+.m-bad { fill: var(--bad-soft); stroke: var(--bad); }
+.cap-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cap-text p { margin: 0; color: var(--ink-2); }
+.cap-text .cap-big { font-size: 16px; font-weight: 600; color: var(--ink); }
+.cap-text .cap-big.bad { color: var(--bad); }
+
+/* Press and hold, to feel the hold time. */
+.holdpad {
+  position: relative; width: 240px; max-width: 100%; height: 56px; border-radius: 8px; overflow: hidden; display: grid; place-items: center;
+  border: 1px solid var(--line-2); background: var(--field); cursor: pointer; touch-action: none; font-weight: 600; font-size: 13.5px;
+}
+.holdpad .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent-soft); }
+.holdpad.holding .fill { width: 100%; transition: width var(--hold, 150ms) linear; }
+.holdpad.opened .fill { width: 100%; background: color-mix(in srgb, var(--ok) 22%, transparent); }
+.holdpad .hp-t { position: relative; }
+
+/* An error instead of a page. */
+.problem { max-width: 620px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px; padding: 20px 24px; }
+.problem h1 { margin: 0; font-family: var(--font-head); font-size: 20px; font-weight: 600; }
+.problem p { margin: 0; }
+.problem code { overflow-wrap: anywhere; }
+
+/* ---------- Save bar, toast, dialogs ---------- */
+.savebar { grid-area: savebar; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.status { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.status.clean .dot { background: var(--ok); }
+.toast {
+  position: absolute; left: 50%; bottom: 68px; z-index: 60; transform: translate(-50%, 8px);
+  display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); padding: 8px 8px 8px 14px; border-radius: 8px;
+  background: var(--fill); color: var(--fill-ink); font-size: 13.5px; box-shadow: var(--pop-shadow);
+  opacity: 0; pointer-events: none; transition: opacity 0.16s, transform 0.16s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast button { border: 0; background: transparent; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; padding: 4px 8px; }
+.scrim { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--scrim); }
+.dialog { width: min(460px, 100%); max-height: calc(100% - 16px); overflow: auto; display: flex; flex-direction: column; background: var(--win); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--pop-shadow); }
+.dlg-head { padding: 20px 24px 6px; }
+.dlg-head h2 { margin: 0; font-family: var(--font-head); font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.dlg-body { padding: 4px 24px 18px; color: var(--ink-2); }
+.dlg-body p { margin: 0 0 8px; }
+.dlg-body ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.dlg-body code { overflow-wrap: anywhere; }
+.dlg-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 14px 24px; background: var(--card); border-top: 1px solid var(--line); }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast, .switch::after { transition: none; }
+}
+@media (max-width: 860px) {
+  .body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .nav { flex-direction: row; overflow-x: auto; padding: 4px 12px 10px; }
+  .nav-app { display: none; }
+  .nav-pages { flex-direction: row; }
+  .nv { flex: none; padding: 7px 12px; }
+  .nv[aria-current="page"]::before { left: 50%; top: auto; bottom: 0; width: 16px; height: 3px; margin: 0 0 0 -8px; }
+  .content { padding: 4px 16px 20px; }
+}

@@ -9,8 +9,8 @@ Makes, in the output folder (dist by default):
   SHA256SUMS                            checksums of the two files above
   release-notes.md                      this version's section of CHANGELOG.md
 
-Run it from the repository root, after building:
-  cargo build --release --locked --target x86_64-pc-windows-msvc -p thumbring
+Run it from the repository root, after building both programs:
+  cargo build --release --locked --target x86_64-pc-windows-msvc -p thumbring -p thumbring-settings
 The release workflow (.github/workflows/release.yml) runs it the same way.
 
 The license notices need cargo-about and the .msi needs WiX Toolset 5; for a
@@ -44,9 +44,11 @@ $metadata = Invoke-Tool cargo @('metadata', '--format-version', '1', '--no-deps'
 $version = ($metadata.packages | Where-Object name -eq 'thumbring').version
 $name = "thumbring-$version-windows-x64"
 $binDir = "target/$Target/release"
-$exe = Join-Path $binDir 'thumbring.exe'
-if (-not (Test-Path $exe)) {
-    throw "$exe does not exist. Build it first: cargo build --release --locked --target $Target -p thumbring"
+$exes = @('thumbring.exe', 'thumbring-settings.exe') | ForEach-Object { Join-Path $binDir $_ }
+foreach ($exe in $exes) {
+    if (-not (Test-Path $exe)) {
+        throw "$exe does not exist. Build it first: cargo build --release --locked --target $Target -p thumbring -p thumbring-settings"
+    }
 }
 
 if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
@@ -86,9 +88,9 @@ if ($SkipNotices) {
         '--output-file', $notices, 'packaging/about.hbs')
 }
 
-# Portable .zip: one folder with the program and its licenses.
-Copy-Item -Destination $stage -Path $exe, 'README.md', 'LICENSE-MIT', 'LICENSE-APACHE',
-    'engine/assets/icons/LICENSE-LUCIDE'
+# Portable .zip: one folder with the programs and their licenses.
+Copy-Item -Destination $stage -Path ($exes + @('README.md', 'LICENSE-MIT', 'LICENSE-APACHE',
+    'engine/assets/icons/LICENSE-LUCIDE'))
 Compress-Archive -Path $stage -DestinationPath (Join-Path $OutDir "$name.zip")
 
 # Installer. The icon is the one engine/build.rs drew for this build.

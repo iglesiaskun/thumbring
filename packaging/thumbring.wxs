@@ -11,7 +11,7 @@
 
   Variables that package.ps1 passes with -d:
     Version   the package version, from Cargo.toml
-    BinDir    the folder with thumbring.exe
+    BinDir    the folder with thumbring.exe and thumbring-settings.exe
     Icon      the app icon made by engine/build.rs
     Notices   THIRD-PARTY-NOTICES.html
     RepoUrl   the project page, linked from Settings > Apps
@@ -60,6 +60,11 @@
         <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
         <RemoveFolder Id="RemoveLocalPrograms" Directory="LocalPrograms" On="uninstall" />
       </Component>
+      <Component Id="Settings" Guid="9BC707FB-F1B6-4F3C-BD3B-7177406FB56E">
+        <File Id="SettingsExe" Source="$(var.BinDir)\thumbring-settings.exe" />
+        <RegistryValue Root="HKCU" Key="Software\Thumbring\Installer" Name="Settings"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
       <Component Id="Licenses" Guid="B95A7426-2ABF-47FA-911F-BF81DBA79DCA">
         <File Id="LicenseMit" Source="LICENSE-MIT" />
         <File Id="LicenseApache" Source="LICENSE-APACHE" />
@@ -75,8 +80,11 @@
     </Feature>
 
     <!-- Before the files change (update or uninstall): asks a running
-         Thumbring to quit, as the Quit item of its menu does. -->
+         Thumbring to quit, as the Quit item of its menu does, and closes the
+         settings window, which first asks to save any changes. -->
     <util:CloseApplication Id="CloseThumbring" Target="thumbring.exe"
+                           CloseMessage="yes" RebootPrompt="no" />
+    <util:CloseApplication Id="CloseSettings" Target="thumbring-settings.exe"
                            CloseMessage="yes" RebootPrompt="no" />
 
     <!-- After an install or update (not an uninstall): starts Thumbring. -->

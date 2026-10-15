@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thumbring Settings</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="banner" id="banner" role="status" hidden></div>
+    <div class="body">
+      <nav class="nav" aria-label="Settings pages">
+        <div class="nav-app">
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#1B1B1F"/><circle cx="16" cy="16" r="8.3" fill="none" stroke="#FFFFFF" stroke-width="3.2"/><circle cx="16" cy="7.7" r="3.8" fill="#FFFFFF"/></svg>
+          <div><b>Thumbring</b><span>Gestures and the action ring</span></div>
+        </div>
+        <div class="nav-pages" id="nav-pages"></div>
+      </nav>
+      <main class="content" id="content"></main>
+    </div>
+    <div class="savebar">
+      <div class="status" id="status"><span class="dot"></span><span class="txt"></span></div>
+      <button type="button" class="btn subtle icon" id="btn-undo" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)"></button>
+      <button type="button" class="btn subtle icon" id="btn-redo" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)"></button>
+      <button type="button" class="btn" id="btn-discard">Discard changes</button>
+      <button type="button" class="btn primary" id="btn-save" title="Ctrl+S">Save</button>
+    </div>
+    <div class="toast" id="toast" role="status"><span class="t"></span><button type="button" hidden></button></div>
+    <div class="scrim" id="scrim" hidden></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,33 @@
+[package]
+# The package name is also the executable name (thumbring-settings.exe).
+name = "thumbring-settings"
+version.workspace = true
+description = "Settings editor for Thumbring."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[build-dependencies]
+# Compresses the images of the app icon, as in the engine.
+miniz_oxide = "0.9"
+# Embeds the interface files, the icon and the version information.
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+thumbring-core.workspace = true
+serde.workspace = true
+# The settings travel to and from the interface as JSON.
+serde_json = { version = "1", features = ["preserve_order"] }
+# The window: a WebView2 page with the interface in ui/.
+tauri = { version = "2.12", features = [] }
+# A second launch brings the open window to the front.
+tauri-plugin-single-instance = "2"
+# Edits the settings file in place, keeping the user's comments.
+toml_edit = "0.25"
+
+# A message box for problems that happen before the window exists. The same
+# version as the engine's, so nothing new is compiled.
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = ["Win32_UI_WindowsAndMessaging"]

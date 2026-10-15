@@ -373,6 +373,18 @@ de configuração e o log numa pasta só, o que ajuda a testar sem mexer na sua
 configuração de verdade. Os arquivos de cada versão são montados por
 [`packaging/package.ps1`](packaging/package.ps1).
 
+A janela de configurações é um programa à parte, que precisa do WebView2
+Runtime (ele vem com o Windows 11 e com as atualizações do Windows 10). A
+interface dela é HTML, CSS e JavaScript puros, em
+[`settings/ui`](settings/ui), sem etapa de build:
+
+```bash
+cargo run -p thumbring-settings -- --dir <pasta>
+```
+
+`--dir` funciona como no motor; sem ele, a janela edita o seu arquivo de
+configuração de verdade.
+
 ## Estrutura
 
 ```
@@ -381,6 +393,8 @@ core/       biblioteca (thumbring-core): lógica pura e testável, sem APIs do
             arquivo de configuração
 engine/     programa Windows (thumbring.exe): hook de mouse, ícone na bandeja,
             executor de comandos e o anel, desenhado na GPU
+settings/   janela de configurações (thumbring-settings.exe): edita o arquivo
+            de configuração mantendo os comentários; interface em settings/ui
 packaging/  empacotamento das versões: instalador, avisos de licença
 ```
 
@@ -399,7 +413,8 @@ Distribuído sob uma das duas licenças abaixo, à sua escolha:
   <https://www.apache.org/licenses/LICENSE-2.0>)
 - Licença MIT ([LICENSE-MIT](LICENSE-MIT) ou <https://opensource.org/licenses/MIT>)
 
-Os ícones do anel em [`engine/assets/icons`](engine/assets/icons) vêm do
+Os ícones do anel em [`engine/assets/icons`](engine/assets/icons) e os da
+janela de configurações em [`settings/ui/icons`](settings/ui/icons) vêm do
 [Lucide](https://lucide.dev) e estão sob a licença ISC
 ([LICENSE-LUCIDE](engine/assets/icons/LICENSE-LUCIDE)).
 

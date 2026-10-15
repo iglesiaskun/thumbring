@@ -11,3 +11,6 @@
 .vscode/
 .idea/
 *.swp
+
+# Schemas that tauri-build writes on every build of the settings app
+/settings/gen/

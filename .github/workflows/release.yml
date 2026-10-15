@@ -71,7 +71,7 @@ jobs:
         run: cargo test --all --locked
 
       - name: Build
-        run: cargo build --release --locked --target ${{ env.TARGET }} -p thumbring
+        run: cargo build --release --locked --target ${{ env.TARGET }} -p thumbring -p thumbring-settings
 
       - name: Install the packaging tools
         shell: pwsh
