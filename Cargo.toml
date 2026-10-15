@@ -1,0 +1,17 @@
+[workspace]
+members = ["core", "engine"]
+resolver = "3"
+
+[workspace.package]
+# The version of the release, for both crates. A tag v<version> publishes it.
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+# Thumbring is an app, not a library for crates.io.
+publish = false
+
+[workspace.dependencies]
+thumbring-core = { path = "core" }
+serde = { version = "1", features = ["derive"] }
+toml = "1.1"

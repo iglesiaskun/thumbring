@@ -1,0 +1,7 @@
+# The same line endings for everyone, whatever their local Git settings.
+# Text: always LF (in the repository and in the working tree).
+* text=auto eol=lf
+
+# Windows scripts need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

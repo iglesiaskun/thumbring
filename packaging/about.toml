@@ -1,0 +1,17 @@
+# Settings for cargo-about, which lists the open source crates compiled into
+# thumbring.exe and their licenses: THIRD-PARTY-NOTICES.html, shipped with
+# every release. Their licenses ask for this notice to travel with the
+# program.
+
+# Licenses Thumbring can ship, in order of preference when a crate offers a
+# choice ("MIT OR Apache-2.0"). A crate under any other license stops the
+# release until someone checks it and adds the license here.
+accepted = ["MIT", "Apache-2.0", "Unicode-3.0"]
+
+# Only what ends up in the Windows executable.
+targets = ["x86_64-pc-windows-msvc"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+
+# Thumbring's own crates are covered by LICENSE-MIT and LICENSE-APACHE.
+private = { ignore = true }

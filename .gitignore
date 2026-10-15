@@ -1,0 +1,13 @@
+# Cargo output
+/target/
+
+# Release files made by packaging/package.ps1
+/dist/
+
+# rustfmt backups
+**/*.rs.bk
+
+# Editors
+.vscode/
+.idea/
+*.swp

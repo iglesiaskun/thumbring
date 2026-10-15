@@ -1,0 +1,137 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds the release and drafts it on GitHub,
+# with the notes from CHANGELOG.md. Nothing is published until a maintainer
+# reviews the draft and clicks "Publish release".
+#
+# Running the workflow by hand (Actions > Release > Run workflow) builds the
+# same files and keeps them as a workflow artifact, without drafting a
+# release: a dry run.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Each job asks for the permissions it needs; by default, only reading.
+permissions:
+  contents: read
+
+# Two runs for the same tag never overlap.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  TARGET: x86_64-pc-windows-msvc
+  # WiX Toolset 5 is the last version under the MS-RL license alone. From
+  # version 6 on, WiX asks users to accept its Open Source Maintenance Fee
+  # terms; moving up is a decision for the maintainers.
+  WIX_VERSION: 5.0.2
+  CARGO_ABOUT_VERSION: 0.9.2
+
+jobs:
+  build:
+    name: Build and package
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      # Signs the build provenance attestation (who built the files, from
+      # which commit, with which workflow).
+      id-token: write
+      attestations: write
+    steps:
+      # Actions are pinned to a commit SHA, which cannot be moved like a tag;
+      # the comment says which release it is.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          targets: ${{ env.TARGET }}
+
+      # No cache on purpose: a release is built from scratch, so nothing left
+      # by an earlier run can end up in it.
+
+      - name: Check that the tag matches the version
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $metadata = cargo metadata --format-version 1 --no-deps | ConvertFrom-Json
+          $version = ($metadata.packages | Where-Object name -eq 'thumbring').version
+          if ($env:TAG -ne "v$version") {
+            throw "The tag $env:TAG does not match the version in Cargo.toml ($version)."
+          }
+
+      - name: Test
+        run: cargo test --all --locked
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ env.TARGET }} -p thumbring
+
+      - name: Install the packaging tools
+        shell: pwsh
+        run: |
+          # Without the "cli" feature, cargo-about installs no program at all.
+          cargo install cargo-about --locked --features cli --version $env:CARGO_ABOUT_VERSION
+          dotnet tool install --global wix --version $env:WIX_VERSION
+          # .NET global tools go here; later steps find wix on the PATH.
+          $tools = Join-Path $env:USERPROFILE '.dotnet\tools'
+          $tools >> $env:GITHUB_PATH
+          & (Join-Path $tools 'wix') extension add -g "WixToolset.Util.wixext/$env:WIX_VERSION"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package
+        shell: pwsh
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: ./packaging/package.ps1 -Target $env:TARGET -RepoUrl $env:REPO_URL
+
+      - name: Attest where the files were built
+        if: github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.zip
+            dist/*.msi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+
+  draft:
+    name: Draft the GitHub release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Creates the release and uploads its files.
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      # The GitHub CLI comes with the runner, so no third-party action gets
+      # write access to the repository. Values from the event go through
+      # environment variables, never straight into the script.
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flags=(--draft --verify-tag --title "Thumbring ${TAG#v}" --notes-file dist/release-notes.md)
+          # A version such as 0.2.0-beta.1 is a pre-release.
+          if [[ "$TAG" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${flags[@]}" \
+            dist/*.zip dist/*.msi dist/SHA256SUMS

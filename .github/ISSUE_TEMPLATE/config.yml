@@ -1,0 +1,6 @@
+# Shown before the issue templates. Blank issues stay open for questions.
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/iglesiaskun/thumbring/security/advisories/new
+    about: Please report security problems privately, not in a public issue.

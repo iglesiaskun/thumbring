@@ -1,0 +1,176 @@
+# Thumbring settings.
+#
+# The engine reloads this file by itself every time it is saved: there is no
+# need to restart anything. An invalid value falls back to its default and
+# logs a warning (tray menu > Open log) instead of stopping the engine. If the
+# whole file cannot be read, the engine keeps the previous settings.
+#
+# To go back to the defaults, quit the engine, delete this file and start the
+# engine again.
+
+# Format of this file. Thumbring uses it to update files written for an older
+# version when the format changes. Leave it as it is, at the top of the file.
+version = 1
+
+# COMMANDS (for gestures and for ring actions)
+#
+#   "Ctrl+Shift+T"   shortcut: Ctrl, Win, Alt and Shift plus one key (A-Z,
+#                    0-9, F1-F24, Left, Right, Up, Down, Tab, Enter, Esc,
+#                    Space, Backspace, Delete, Home, End, PageUp, PageDown,
+#                    PrintScreen, Plus, Minus or a character such as . or ,)
+#   "VolumeUp"       media and volume: VolumeUp, VolumeDown, VolumeMute,
+#                    PlayPause, NextTrack, PrevTrack, MediaStop
+#   'open:C:\Users\you\Downloads'
+#                    opens an app, file, folder or URL; variables such as
+#                    %USERPROFILE% work. With single quotes around it, the
+#                    backslash does not need to be doubled.
+#   'open:"C:\Program Files\App\app.exe" --option'
+#                    with arguments: the path goes in double quotes
+#   "screenshot"     snipping screenshot (Win+Shift+S)
+#   "emoji"          emoji panel (Win+.)
+#   "explorer"       File Explorer (Win+E)
+#   "lock"           locks the screen
+#   "native"         what the button would do without the engine
+#   "none"           nothing
+
+# Hold the mouse Back button, drag to one side and release.
+[gestures]
+up = "Win+Tab"            # Task View
+down = "Win+D"            # show the desktop
+left = "Ctrl+Win+Right"   # next virtual desktop (pushes this one aside)
+right = "Ctrl+Win+Left"   # previous virtual desktop
+click = "native"          # quick tap without dragging: Back
+# Minimum drag distance, in pixels at 100% scaling (10 to 200). On screens
+# with a larger scale, the engine grows it in the same proportion.
+threshold_px = 30
+
+[apps]
+# Turns gestures off while the focused app is fullscreen (games, videos,
+# presentations). The button then works as usual.
+disable_in_fullscreen = true
+# In these apps the button works as usual. Use the .exe name, shown in the
+# Details tab of Task Manager or in the log when an app gets focus.
+excluded = []
+# excluded = ["mstsc.exe", "game.exe"]
+
+# PER-APP PROFILES
+# A profile changes only the gestures it lists; the others come from
+# [gestures]. If an app appears in more than one profile, the first one wins.
+# The profiles below are examples: to use one, remove the # at the start of
+# its lines.
+#
+# [[profiles]]
+# name = "Browser"
+# apps = ["browser.exe"]      # the executable of your browser
+# gestures = { left = "Ctrl+Tab", right = "Ctrl+Shift+Tab" }
+#
+# [[profiles]]
+# apps = ["editor.exe"]       # the executable of your code editor
+# gestures = { click = "none" }
+
+# Ring logic timings. The quick tap of the gestures uses the same limit:
+# releasing the button before it, without dragging, counts as a click.
+[behavior]
+hold_to_open_ms = 150       # 60 to 1000
+path_tolerance_ms = 50      # 0 to 1000
+open_with = "hold"          # "hold" or "tap"
+execute_on_release = false  # quick mode: releasing over an action runs it
+
+# Ring animations.
+[animation]
+style = "viscous"           # "viscous" or "elastic"
+speed = 1.0                 # 0.5 to 2.0, multiplies every animation
+ring_open_ms = 150
+ring_close_ms = 170
+blob_ms_per_item = 135
+viscosity = 0.85            # 0.2 to 2.0
+break_at = 0.95             # 0.5 to 0.95
+wobble = 0.0                # 0 to 1
+folder_items_ms = 170
+folder_close_ms = 100
+ignore_system_reduced_motion = false
+
+# THE RING
+# Hold the mouse Forward button: the ring opens around the cursor. It has 8
+# slots, starting at the top, clockwise. A slot holds an action, a folder with
+# up to 9 actions, or nothing (type = "empty"). Click an item to run it; a
+# folder opens when the cursor rests on it.
+#
+# Each action has a name (its label), an icon and a command (see COMMANDS at
+# the top). Without an icon, the item shows the first letter of its name.
+# Icons: calculator, calendar, clipboard, clipboard-list, clipboard-paste,
+# code, copy, folder-open, globe, headphones, layout-grid, lock, mail, music,
+# play, redo-2, scan, scissors, settings, skip-back, skip-forward, smile,
+# sticky-note, terminal, undo-2, volume-1, volume-2, volume-x, x.
+#
+# To turn the ring off and keep the Forward button as it always was, replace
+# all the slots below with:
+#
+# [ring]
+# slots = []
+
+[[ring.slots]]
+type = "action"
+name = "Play or pause"
+icon = "play"
+command = "PlayPause"
+
+[[ring.slots]]
+type = "action"
+name = "Screenshot"
+icon = "scan"
+command = "screenshot"
+
+[[ring.slots]]
+type = "folder"
+name = "Media"
+icon = "music"
+items = [
+  { name = "Previous track", icon = "skip-back", command = "PrevTrack" },
+  { name = "Next track", icon = "skip-forward", command = "NextTrack" },
+  { name = "Volume down", icon = "volume-1", command = "VolumeDown" },
+  { name = "Volume up", icon = "volume-2", command = "VolumeUp" },
+  { name = "Mute", icon = "volume-x", command = "VolumeMute" },
+]
+
+[[ring.slots]]
+type = "action"
+name = "Lock screen"
+icon = "lock"
+command = "lock"
+
+[[ring.slots]]
+type = "folder"
+name = "Editing"
+icon = "clipboard"
+items = [
+  { name = "Copy", icon = "copy", command = "Ctrl+C" },
+  { name = "Paste", icon = "clipboard-paste", command = "Ctrl+V" },
+  { name = "Cut", icon = "scissors", command = "Ctrl+X" },
+  { name = "Undo", icon = "undo-2", command = "Ctrl+Z" },
+  { name = "Redo", icon = "redo-2", command = "Ctrl+Y" },
+  { name = "Clipboard history", icon = "clipboard-list", command = "Win+V" },
+]
+
+[[ring.slots]]
+type = "action"
+name = "Emoji"
+icon = "smile"
+command = "emoji"
+
+[[ring.slots]]
+type = "action"
+name = "File Explorer"
+icon = "folder-open"
+command = "explorer"
+
+[[ring.slots]]
+type = "folder"
+name = "Apps"
+icon = "layout-grid"
+items = [
+  { name = "Calculator", icon = "calculator", command = "open:calc.exe" },
+  { name = "Notepad", icon = "sticky-note", command = "open:notepad.exe" },
+  { name = "Terminal", icon = "terminal", command = "open:wt.exe" },
+  { name = "Settings", icon = "settings", command = "open:ms-settings:" },
+]

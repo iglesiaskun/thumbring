@@ -1,0 +1,66 @@
+name: Bug report
+description: Something in Thumbring does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! Please search the open issues first: it may be there already.
+        Security problems go through a private report instead, as explained in SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Held the Forward button over the browser
+        2. The ring opened, then ...
+        Expected: ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Thumbring version
+      description: The first line of the log says it ("engine 0.1.0 starting").
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Installer (.msi)
+        - Portable (.zip)
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Press Win+R, type winver and press Enter.
+      placeholder: Windows 11 24H2 (build 26100)
+    validations:
+      required: true
+  - type: input
+    id: mouse
+    attributes:
+      label: Mouse
+      description: Its model, and whether its own software is installed (that software can remap the side buttons).
+      placeholder: Wireless mouse with two side buttons, its software installed
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Tray menu > Open log (`%LOCALAPPDATA%\thumbring\engine.log`). Paste the lines around the problem.
+        The log lists the names of the apps you used; remove any you would rather not share.
+      render: text
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings
+      description: If the problem is about a gesture, a profile or the ring, the part of `config.toml` involved.
+      render: toml

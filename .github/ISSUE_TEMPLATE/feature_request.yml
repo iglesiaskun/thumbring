@@ -1,0 +1,26 @@
+name: Feature request
+description: An idea to make Thumbring better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thumbring tries to stay small and light, so ideas that keep it that way are the easiest to take in.
+        Please search the open issues first: someone may have asked already.
+  - type: textarea
+    id: need
+    attributes:
+      label: What do you want to do?
+      description: The situation first, then the solution. For example, "When I ..., I want to ...".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How could Thumbring help? Examples of what you would write in the settings file are welcome.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways you tried or thought about.

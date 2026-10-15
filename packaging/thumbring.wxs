@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Installer package (.msi) for Thumbring, built by package.ps1 with
+  WiX Toolset 5.
+
+  It installs for the current user only, so it never asks for administrator
+  rights: the files go to %LOCALAPPDATA%\Programs\Thumbring and a shortcut to
+  the Start menu. A running Thumbring is closed before the files change and
+  started again at the end, so an update needs no restart. Uninstalling also
+  turns off starting with Windows, in both of its ways.
+
+  Variables that package.ps1 passes with -d:
+    Version   the package version, from Cargo.toml
+    BinDir    the folder with thumbring.exe
+    Icon      the app icon made by engine/build.rs
+    Notices   THIRD-PARTY-NOTICES.html
+    RepoUrl   the project page, linked from Settings > Apps
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <!-- The UpgradeCode ties all versions together, so a new version replaces
+       the installed one. It must never change. -->
+  <Package Name="Thumbring"
+           Manufacturer="Thumbring"
+           Version="$(var.Version)"
+           UpgradeCode="92AF1704-D9EA-42D1-87DD-831D0F9A8D74"
+           Scope="perUser"
+           Language="1033">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Thumbring is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Settings > Apps: icon, links, and no "Modify" button. -->
+    <Icon Id="thumbring.ico" SourceFile="$(var.Icon)" />
+    <Property Id="ARPPRODUCTICON" Value="thumbring.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="$(var.RepoUrl)" />
+    <Property Id="ARPHELPLINK" Value="$(var.RepoUrl)/issues" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalPrograms" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Thumbring" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <!-- Files in the user profile need a registry value under HKCU as their
+         key path, and their folders need RemoveFolder: Windows Installer
+         rules for per-user packages. Components like that cannot get an
+         automatic GUID, so they have fixed ones, which must never change.
+         ICE91 warns that these files would not follow a per-machine install;
+         this package is per-user only, so that is expected. -->
+    <ComponentGroup Id="Files" Directory="INSTALLFOLDER">
+      <Component Id="Engine" Guid="B29A58CE-0F82-45C2-9E02-482AAF83CDAE">
+        <File Id="ThumbringExe" Source="$(var.BinDir)\thumbring.exe" />
+        <Shortcut Id="ThumbringShortcut" Directory="ProgramMenuFolder" Name="Thumbring"
+                  Description="Mouse gestures and an action ring"
+                  Target="[#ThumbringExe]" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\Thumbring\Installer" Name="Engine"
+                       Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        <RemoveFolder Id="RemoveLocalPrograms" Directory="LocalPrograms" On="uninstall" />
+      </Component>
+      <Component Id="Licenses" Guid="B95A7426-2ABF-47FA-911F-BF81DBA79DCA">
+        <File Id="LicenseMit" Source="LICENSE-MIT" />
+        <File Id="LicenseApache" Source="LICENSE-APACHE" />
+        <File Id="LicenseLucide" Source="engine\assets\icons\LICENSE-LUCIDE" />
+        <File Id="Notices" Source="$(var.Notices)" />
+        <RegistryValue Root="HKCU" Key="Software\Thumbring\Installer" Name="Licenses"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="Files" />
+    </Feature>
+
+    <!-- Before the files change (update or uninstall): asks a running
+         Thumbring to quit, as the Quit item of its menu does. -->
+    <util:CloseApplication Id="CloseThumbring" Target="thumbring.exe"
+                           CloseMessage="yes" RebootPrompt="no" />
+
+    <!-- After an install or update (not an uninstall): starts Thumbring. -->
+    <Property Id="WixShellExecTarget" Value="[#ThumbringExe]" />
+    <CustomAction Id="StartThumbring" BinaryRef="Wix4UtilCA_X64" DllEntry="WixShellExec"
+                  Impersonate="yes" Return="ignore" />
+    <!-- On uninstall, but not on an update: deletes the entries that start
+         Thumbring with Windows. Thumbring creates them from its tray menu, so
+         the package does not know them as its own. The Run value and the
+         task both belong to the user, who may delete them without
+         administrator rights; reg.exe and schtasks.exe come with Windows. An
+         entry that does not exist is just an error to ignore. The task name
+         must match `name` in engine/src/autostart/task.rs. -->
+    <SetProperty Id="RemoveRunValue" Sequence="execute" Before="RemoveRunValue"
+                 Value="&quot;[System64Folder]reg.exe&quot; delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v Thumbring /f" />
+    <CustomAction Id="RemoveRunValue" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <SetProperty Id="RemoveAdminTask" Sequence="execute" Before="RemoveAdminTask"
+                 Value="&quot;[System64Folder]schtasks.exe&quot; /delete /tn &quot;Thumbring ([LogonUser])&quot; /f" />
+    <CustomAction Id="RemoveAdminTask" BinaryRef="Wix4UtilCA_X64" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="StartThumbring" After="InstallFinalize" Condition="NOT REMOVE" />
+      <Custom Action="RemoveRunValue" Before="RemoveFiles"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="RemoveAdminTask" After="RemoveRunValue"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

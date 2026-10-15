@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  # Pushes to a pull request branch are covered by `pull_request`; running on
+  # every branch push too would test the same commit twice.
+  push:
+    branches: [main]
+  pull_request:
+
+# The job only reads the code.
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its older run. Runs on `main` are never
+# cancelled, so every commit there gets a result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt, clippy and test
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # Actions are pinned to a commit SHA, which cannot be moved like a tag;
+      # the comment says which release it is.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Lint
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Test
+        run: cargo test --all

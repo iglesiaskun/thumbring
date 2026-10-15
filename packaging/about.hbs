@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Thumbring: third-party licenses</title>
+<style>
+  body { font-family: "Segoe UI", sans-serif; max-width: 60em; margin: 2em auto; padding: 0 1em; line-height: 1.5; }
+  pre { white-space: pre-wrap; background: #f4f4f5; padding: 1em; border-radius: 6px; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<h1>Third-party licenses</h1>
+<p>
+  Thumbring is built with the open source crates listed here, each with its
+  license. The icons in the ring come from <a href="https://lucide.dev">Lucide</a>,
+  under the ISC license in LICENSE-LUCIDE.
+</p>
+
+<h2>Licenses used</h2>
+<ul>
+{{#each overview}}
+  <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+{{/each}}
+</ul>
+
+<h2>Crates and license texts</h2>
+{{#each licenses}}
+<h3 id="{{id}}">{{name}}</h3>
+<p>Used by:</p>
+<ul>
+{{#each used_by}}
+  <li><a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a></li>
+{{/each}}
+</ul>
+<pre>{{text}}</pre>
+{{/each}}
+</body>
+</html>
