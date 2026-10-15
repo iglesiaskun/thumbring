@@ -18,6 +18,9 @@ const APP_DIR: &str = "thumbring";
 pub struct Paths {
     pub config_file: PathBuf,
     pub log_file: PathBuf,
+    /// The folder given with `--dir`, absolute, which the settings window
+    /// gets too.
+    pub dir: Option<PathBuf>,
 }
 
 impl Paths {
@@ -27,7 +30,10 @@ impl Paths {
         while let Some(arg) = args.next() {
             if arg == "--dir" {
                 let value = args.next().ok_or("a folder is missing after --dir")?;
-                dir = Some(PathBuf::from(value));
+                // Absolute, because the settings window starts elsewhere.
+                let value = std::path::absolute(&value)
+                    .map_err(|e| format!("the folder after --dir is not valid: {e}"))?;
+                dir = Some(value);
             } else {
                 return Err(format!(
                     "unknown argument: {} (the only one accepted is --dir <folder>)",
@@ -39,11 +45,13 @@ impl Paths {
             return Ok(Self {
                 config_file: dir.join("config.toml"),
                 log_file: dir.join("engine.log"),
+                dir: Some(dir),
             });
         }
         Ok(Self {
             config_file: known_dir("APPDATA")?.join(APP_DIR).join("config.toml"),
             log_file: known_dir("LOCALAPPDATA")?.join(APP_DIR).join("engine.log"),
+            dir: None,
         })
     }
 }

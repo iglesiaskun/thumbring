@@ -27,9 +27,10 @@ A lightweight Windows tool that gives any mouse **gestures** and a radial
   ![Holding Back and dragging runs a gesture](docs/media/gestures.gif)
 -->
 
-Thumbring 0.1.0 is the first public release. It is configured through a
-settings file; a visual settings editor is planned for 0.2.0. What changed in
-each version is in the [changelog](CHANGELOG.md).
+Thumbring 0.1.0 is the first public release, configured through a settings
+file. The next version adds a settings window (tray menu > Open settings),
+and the file keeps working as before. What changed in each version is in the
+[changelog](CHANGELOG.md).
 
 ## Install
 
@@ -304,12 +305,18 @@ Yes. By default Thumbring uses the two side buttons, Back and Forward
 and pressing the wheel runs the gestures or opens the ring.
 
 **How do I change the gestures or the ring?**
-Right-click the tray icon > Open settings file, edit it and save it. Thumbring
-reloads it at once; the "Configuration" section above explains the options.
+Right-click the tray icon > Open settings, change what you want and save.
+Thumbring uses the new settings at once. You can also edit the file itself:
+tray menu > Open settings file; the "Configuration" section above explains
+the options.
 
 **Is there a settings window?**
-Not yet. Version 0.1.0 is configured through the settings file, and a visual
-editor is planned for 0.2.0.
+Yes, from the next version: tray menu > Open settings. It shows your ring with
+a live preview, the gestures, the apps and their profiles, the behavior and
+the animation. It is a separate program, `thumbring-settings.exe`, next to
+`thumbring.exe`, and needs the WebView2 Runtime, which comes with Windows 11
+and with the updates of Windows 10. It saves to the same settings file and
+keeps its comments.
 
 **How do I go back to the default settings?**
 Quit Thumbring, delete `%APPDATA%\thumbring\config.toml` and start Thumbring
@@ -371,7 +378,8 @@ cargo run -p thumbring-settings -- --dir <folder>
 ```
 
 `--dir` works as in the engine; without it, the window edits your real
-settings file.
+settings file. The engine's tray menu > Open settings opens the window next to
+`thumbring.exe` and passes on its own `--dir`, so both use the same file.
 
 ## Project layout
 

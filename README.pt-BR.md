@@ -25,8 +25,9 @@ ações** radial:
   ![Segurar o voltar e arrastar dispara um gesto](docs/media/gestures.gif)
 -->
 
-O Thumbring 0.1.0 é a primeira versão pública. A configuração é feita por um
-arquivo; um editor visual está planejado para a 0.2.0. O que mudou em cada
+O Thumbring 0.1.0 é a primeira versão pública, configurada por um arquivo. A
+próxima versão traz uma janela de configurações (menu da bandeja > Open
+settings), e o arquivo continua funcionando como antes. O que mudou em cada
 versão está no [changelog](CHANGELOG.md) (em inglês).
 
 ## Instalação
@@ -313,13 +314,18 @@ vezes chamados de botões 4 e 5). Num mouse sem eles, escreva
 e apertar a roda faz os gestos ou abre o anel.
 
 **Como mudo os gestos ou o anel?**
-Botão direito no ícone da bandeja > Open settings file, edite e salve. O
-Thumbring relê o arquivo na hora; a seção "Configuração", acima, explica as
-opções.
+Botão direito no ícone da bandeja > Open settings, mude o que quiser e salve.
+O Thumbring passa a usar a configuração nova na hora. Também dá para editar o
+próprio arquivo: menu da bandeja > Open settings file; a seção "Configuração",
+acima, explica as opções.
 
 **Tem uma janela de configurações?**
-Ainda não. A versão 0.1.0 é configurada pelo arquivo, e um editor visual está
-planejado para a 0.2.0.
+Tem, a partir da próxima versão: menu da bandeja > Open settings. Ela mostra o
+seu anel com uma prévia ao vivo, os gestos, os apps e os perfis deles, o
+comportamento e a animação. É um programa à parte, o
+`thumbring-settings.exe`, ao lado do `thumbring.exe`, e precisa do WebView2
+Runtime, que vem com o Windows 11 e com as atualizações do Windows 10. Ela
+grava no mesmo arquivo de configuração e mantém os comentários dele.
 
 **Como volto para a configuração padrão?**
 Feche o Thumbring, apague `%APPDATA%\thumbring\config.toml` e abra o Thumbring
@@ -383,7 +389,9 @@ cargo run -p thumbring-settings -- --dir <pasta>
 ```
 
 `--dir` funciona como no motor; sem ele, a janela edita o seu arquivo de
-configuração de verdade.
+configuração de verdade. O menu da bandeja do motor > Open settings abre a
+janela que está ao lado do `thumbring.exe` e repassa o `--dir` do próprio
+motor, então os dois usam o mesmo arquivo.
 
 ## Estrutura
 

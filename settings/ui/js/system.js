@@ -14,3 +14,9 @@ export const runningApps = () => invoke('running_apps');
 
 /** The name of an app as the settings file writes it (`browser.exe`), or null. */
 export const appName = text => invoke('app_name', { text });
+
+/**
+ * Whether Thumbring runs and reads the file this window edits:
+ * 'same_file', 'other_file', 'not_running' or 'unknown'.
+ */
+export const engineStatus = () => invoke('engine_status').catch(() => 'unknown');

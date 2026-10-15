@@ -60,6 +60,7 @@ pub const ID_OPEN_LOG: u32 = 3;
 pub const ID_AUTOSTART: u32 = 4;
 pub const ID_QUIT: u32 = 5;
 pub const ID_ADMIN_START: u32 = 6;
+pub const ID_OPEN_SETTINGS: u32 = 7;
 
 static WINDOW: AtomicUsize = AtomicUsize::new(0);
 /// Message Explorer sends when the taskbar restarts.
@@ -83,6 +84,8 @@ pub struct Context {
     pub events: Sender<Msg>,
     pub config_file: PathBuf,
     pub log_file: PathBuf,
+    /// The folder given with `--dir`, for the settings window.
+    pub dir: Option<PathBuf>,
 }
 
 struct State {
@@ -329,6 +332,7 @@ fn show_menu(window: HWND, x: i32, y: i32) {
         };
         append(menu, MF_STRING, ID_PAUSE, pause);
         append(menu, MF_SEPARATOR, 0, "");
+        append(menu, MF_STRING, ID_OPEN_SETTINGS, text::menu::OPEN_SETTINGS);
         append(menu, MF_STRING, ID_OPEN_CONFIG, text::menu::OPEN_CONFIG);
         append(menu, MF_STRING, ID_OPEN_LOG, text::menu::OPEN_LOG);
         append(menu, normal, ID_AUTOSTART, text::menu::START_WITH_WINDOWS);
@@ -369,6 +373,11 @@ fn command(window: HWND, id: u32) {
     match id {
         ID_PAUSE => {
             with_state(|s| s.context.events.send(Msg::TogglePause));
+        }
+        ID_OPEN_SETTINGS => {
+            with_state(|s| {
+                actions::open_settings_window(&s.context.config_file, s.context.dir.as_deref());
+            });
         }
         ID_OPEN_CONFIG => {
             if let Some(path) = with_state(|s| s.context.config_file.clone()) {

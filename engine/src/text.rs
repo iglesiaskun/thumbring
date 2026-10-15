@@ -8,6 +8,7 @@ pub const APP_NAME: &str = "Thumbring";
 pub mod menu {
     pub const PAUSE: &str = "Pause gestures";
     pub const RESUME: &str = "Resume gestures";
+    pub const OPEN_SETTINGS: &str = "Open settings";
     pub const OPEN_CONFIG: &str = "Open settings file";
     pub const OPEN_LOG: &str = "Open log";
     pub const START_WITH_WINDOWS: &str = "Start with Windows";
@@ -47,6 +48,10 @@ pub mod notice {
     pub const ADMIN_START_TEXT: &str = "From the next sign-in, Thumbring starts with \
         administrator rights, without asking, and also works in windows that run as \
         administrator. The apps it opens still run without those rights.";
+    pub const NO_SETTINGS_WINDOW_TITLE: &str = "Settings window not found";
+    pub const NO_SETTINGS_WINDOW_TEXT: &str = "thumbring-settings.exe is not next to \
+        thumbring.exe, so the settings file opens in a text editor instead. Installing \
+        Thumbring again brings the window back.";
     pub const NOT_OPENED_TITLE: &str = "Nothing was opened";
     pub const NOT_OPENED_TEXT: &str = "Thumbring runs as administrator and opens apps through \
         File Explorer, so they do not get those rights. File Explorer did not answer; try again \
@@ -97,6 +102,10 @@ mod tests {
             (notice::FIRST_RUN_TITLE, notice::FIRST_RUN_TEXT),
             (notice::ADMIN_START_TITLE, notice::ADMIN_START_TEXT),
             (notice::NOT_OPENED_TITLE, notice::NOT_OPENED_TEXT),
+            (
+                notice::NO_SETTINGS_WINDOW_TITLE,
+                notice::NO_SETTINGS_WINDOW_TEXT,
+            ),
         ] {
             assert!(title.encode_utf16().count() <= 63, "{title}");
             assert!(text.encode_utf16().count() <= 255, "{text}");

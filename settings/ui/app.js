@@ -4,7 +4,7 @@
 import { $, $$, cancelDialog, closePop, dialog, esc, icon, isTyping, loadIcons, toast } from './js/ui.js';
 import { canRedo, canUndo, change, dirty, onChange, redo, reset, store, undo } from './js/store.js';
 import { loadRingIcons } from './js/ring-icons.js';
-import { invoke, listen } from './js/system.js';
+import { engineStatus, invoke, listen } from './js/system.js';
 import * as ring from './js/pages/ring.js';
 import * as gestures from './js/pages/gestures.js';
 import * as apps from './js/pages/apps.js';
@@ -53,7 +53,9 @@ function show(next) {
 function updateSaveBar() {
   const d = dirty(), status = $('#status');
   status.classList.toggle('clean', !d);
-  const name = store.path.split(/[\\/]/).pop();
+  // A file in another folder (--dir) shows its whole path, so it is never
+  // taken for the usual one.
+  const name = store.customDir ? store.path : store.path.split(/[\\/]/).pop();
   $('.txt', status).innerHTML = d
     ? 'Unsaved changes'
     : store.newFile
@@ -137,7 +139,7 @@ async function save(overwrite = false) {
   try {
     reset(await invoke('save_settings', { settings: store.settings, overwrite }));
     showWarnings();
-    toast('Saved. Thumbring is using the new settings.');
+    await tellWhereSaved();
     return true;
   } catch (e) {
     if (e.kind === 'changed_outside') showChangedOutside();
@@ -150,6 +152,32 @@ async function save(overwrite = false) {
     } else toast(`Not saved: ${e.details}`);
     return false;
   }
+}
+
+/** Says whether the save is in effect: only an engine on this file reloads it. */
+async function tellWhereSaved() {
+  const status = await engineStatus();
+  if (status === 'same_file') toast('Saved. Thumbring is using the new settings.');
+  else if (status === 'not_running') toast('Saved. Thumbring isn’t running; it uses these settings when it starts.');
+  else if (status === 'other_file') {
+    await dialog({
+      title: 'Saved, but not in use',
+      body: `<p>The Thumbring running now reads another settings file, so these changes are not in effect.</p>
+        <p>This window edits <code>${esc(store.path)}</code>. Open the settings from Thumbring’s icon in the notification area to edit the file it reads.</p>`,
+      buttons: [{ label: 'OK', primary: true, value: 'ok' }],
+    });
+  } else toast('Saved');
+}
+
+/** A second launch asked for another file: this window keeps its own. */
+async function otherFileAsked(asked) {
+  const choice = await dialog({
+    title: 'This window edits another file',
+    body: `<p>The settings were opened for <code>${esc(asked)}</code>, but this window edits <code>${esc(store.path)}</code>.</p>
+      <p>Close this window and open the settings again to edit the other file.</p>`,
+    buttons: [{ label: 'Keep this one', value: 'keep' }, { label: 'Close this window', primary: true, value: 'close' }],
+  });
+  if (choice === 'close') askBeforeClosing();
 }
 
 async function discard() {
@@ -210,6 +238,7 @@ async function start() {
     updateSaveBar();
   });
   listen('close-requested', askBeforeClosing);
+  listen('other-file', e => otherFileAsked(e.payload));
   $('#content').addEventListener('scroll', () => closePop(), { passive: true });
   window.addEventListener('thumbring:goto', e => {
     const next = PAGES.find(p => p.id === e.detail);

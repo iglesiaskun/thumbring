@@ -104,7 +104,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         return ring::preview::run(freeze_at, save.as_deref(), &config);
     }
     let paths = Paths::from_args(args)?;
-    let Some(_instance) = instance::acquire()? else {
+    let Some(_instance) = instance::acquire(&paths.config_file)? else {
         alert(&text::alert::already_running(), MB_ICONINFORMATION);
         return Ok(());
     };
@@ -154,6 +154,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         events: events.clone(),
         config_file: paths.config_file.clone(),
         log_file: paths.log_file.clone(),
+        dir: paths.dir.clone(),
     })?;
     if first_run {
         // New icons hide behind the arrow of the notification area.

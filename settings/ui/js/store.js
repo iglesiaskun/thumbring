@@ -15,6 +15,8 @@ export const store = {
   /** Problems the engine found in the file when it was read. */
   warnings: [],
   path: '',
+  /** The file is not the usual one: the window was opened with `--dir`. */
+  customDir: false,
   /** The file does not exist yet: saving creates it. */
   newFile: false,
 };
@@ -42,6 +44,7 @@ export function reset(snapshot) {
   store.blobPresets = snapshot.blob_presets;
   store.warnings = snapshot.warnings;
   store.path = snapshot.path;
+  store.customDir = snapshot.custom_dir;
   store.newFile = snapshot.new_file;
   saved = stable(snapshot.settings);
   undoList.length = 0;

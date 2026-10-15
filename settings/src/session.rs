@@ -29,6 +29,8 @@ pub struct Snapshot {
     /// Values the engine replaced by their defaults or ignored.
     pub warnings: Vec<String>,
     pub path: PathBuf,
+    /// The file is not the usual one: the window was opened with `--dir`.
+    pub custom_dir: bool,
     /// The file does not exist yet: saving creates it.
     pub new_file: bool,
     /// The default settings, in the same shape.
@@ -115,6 +117,7 @@ impl Session {
             settings: self.settings.clone(),
             warnings: self.warnings.clone(),
             path: self.path.clone(),
+            custom_dir: file::config_path([]).map_or(true, |usual| usual != self.path),
             new_file: self.bytes.is_none(),
             defaults: serde_json::to_value(Config::default()).unwrap_or_default(),
             limits: limits(),

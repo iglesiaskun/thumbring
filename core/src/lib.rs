@@ -16,6 +16,7 @@
 //! - [`screen`]: rule that tells whether the focused window is fullscreen.
 //! - [`config`]: TOML configuration file, with lenient validation.
 //! - [`color`]: the `"#RRGGBB"` colors of the ring appearance.
+//! - [`instance`]: names the engine and the settings window find each other by.
 
 pub mod anim;
 pub mod apps;
@@ -23,6 +24,7 @@ pub mod color;
 pub mod command;
 pub mod config;
 pub mod gesture;
+pub mod instance;
 pub mod layout;
 pub mod ring;
 pub mod ring_machine;

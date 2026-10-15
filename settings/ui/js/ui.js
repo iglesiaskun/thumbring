@@ -67,7 +67,8 @@ export function toast(text, { action, run } = {}) {
   button.onclick = action ? () => { hide(); run(); } : null;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hide, action ? 5200 : 2600);
+  // Long enough to read: longer texts stay longer.
+  toastTimer = setTimeout(hide, action ? 5200 : Math.max(2600, text.length * 50));
 }
 
 /* ---------- Dialogs ---------- */

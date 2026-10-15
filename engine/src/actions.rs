@@ -74,6 +74,40 @@ pub fn open_text_file(path: &Path) {
     open_in_background(open);
 }
 
+/// The settings window, shipped next to `thumbring.exe`.
+const SETTINGS_EXE: &str = "thumbring-settings.exe";
+
+/// Opens the settings window on the same settings file. Without the window,
+/// the file opens in a text editor.
+pub fn open_settings_window(config_file: &Path, dir: Option<&Path>) {
+    let window = std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.join(SETTINGS_EXE)))
+        .filter(|path| path.is_file());
+    let Some(window) = window else {
+        warning!("{SETTINGS_EXE} is not next to the engine; opening the settings file instead");
+        tray::notify(
+            Notice::Warning,
+            text::notice::NO_SETTINGS_WINDOW_TITLE,
+            text::notice::NO_SETTINGS_WINDOW_TEXT,
+        );
+        open_text_file(config_file);
+        return;
+    };
+    open_in_background(Open {
+        target: window.to_string_lossy().into_owned(),
+        args: dir.map(dir_argument),
+    });
+}
+
+/// `--dir "<folder>"` for a command line. Backslashes right before the
+/// closing quote are doubled, or they would escape it (`"C:\"`).
+fn dir_argument(dir: &Path) -> String {
+    let dir = dir.to_string_lossy();
+    let trailing = dir.len() - dir.trim_end_matches('\\').len();
+    format!("--dir \"{dir}{}\"", "\\".repeat(trailing))
+}
+
 /// Opens on a separate thread: `ShellExecuteEx` can take a while (a network
 /// path, a slow app) and the caller must not block.
 fn open_in_background(open: Open) {
@@ -201,4 +235,19 @@ fn has_association(extension: &str) -> bool {
     };
     // Without a buffer, success comes back as S_FALSE (with the needed size).
     result == S_FALSE || result.is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_folder_is_quoted_for_the_command_line() {
+        assert_eq!(
+            dir_argument(Path::new(r"S:\My tests\thumbring")),
+            r#"--dir "S:\My tests\thumbring""#
+        );
+        // A drive's root ends in a backslash that must not escape the quote.
+        assert_eq!(dir_argument(Path::new(r"D:\")), r#"--dir "D:\\""#);
+    }
 }

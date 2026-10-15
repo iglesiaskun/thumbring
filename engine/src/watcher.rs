@@ -8,7 +8,8 @@
 //!
 //! Problems in the file (invalid values, a file that cannot be read) go to the
 //! log and to a notification, once: saving again with the same problems does
-//! not repeat the warning.
+//! not repeat the warning. While the settings window is open on the file, a
+//! reload without problems has no notification: the window says it was saved.
 
 use std::fs;
 use std::io;
@@ -27,8 +28,8 @@ use windows::core::HSTRING;
 
 use crate::log::{error, info, warning};
 use crate::ring::icons;
-use crate::text;
 use crate::tray::{self, Notice};
+use crate::{instance, text};
 
 /// How long the folder must stay quiet before the file is read again.
 const QUIET: Duration = Duration::from_millis(200);
@@ -155,8 +156,11 @@ pub fn notify_at_start(problems: &Problems) {
     }
 }
 
-fn notify_after_save(problems: &Problems, told: &Problems) {
+fn notify_after_save(path: &Path, problems: &Problems, told: &Problems) {
     match after_save(problems, told) {
+        Some(Notification::Reloaded) if instance::settings_window_open(path) => {
+            info!("the settings window is open and tells about the save itself");
+        }
         Some(Notification::Reloaded) => tray::notify(
             Notice::Info,
             text::notice::RELOADED_TITLE,
@@ -252,7 +256,7 @@ fn watch(
             Problems::Warnings(w) => info!("settings reloaded with {} warning(s)", w.len()),
             Problems::Unreadable(_) => {}
         }
-        notify_after_save(&problems, &told);
+        notify_after_save(path, &problems, &told);
         told = problems;
         if let Some(loaded) = loaded {
             on_change(loaded.config);

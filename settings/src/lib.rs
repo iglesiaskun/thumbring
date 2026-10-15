@@ -6,6 +6,7 @@
 
 pub mod apps;
 pub mod edit;
+pub mod engine;
 pub mod file;
 pub mod icons;
 pub mod session;

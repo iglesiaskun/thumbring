@@ -23,7 +23,10 @@ pub fn config_path(args: impl IntoIterator<Item = OsString>) -> Result<PathBuf, 
     while let Some(arg) = args.next() {
         if arg == "--dir" {
             let value = args.next().ok_or("a folder is missing after --dir")?;
-            dir = Some(PathBuf::from(value));
+            // Absolute, as the engine has it, so both name the file alike.
+            let value = std::path::absolute(&value)
+                .map_err(|e| format!("the folder after --dir is not valid: {e}"))?;
+            dir = Some(value);
         } else {
             return Err(format!(
                 "unknown argument: {} (the only one accepted is --dir <folder>)",

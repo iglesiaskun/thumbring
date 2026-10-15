@@ -6,16 +6,18 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::Value as Json;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use thumbring_core::instance::file_key;
 use thumbring_settings::apps::{self, RunningApp};
 use thumbring_settings::session::{OpenError, SaveError, Session, Snapshot};
-use thumbring_settings::{file, icons};
+use thumbring_settings::{engine, file, icons};
 
 const WINDOW: &str = "main";
 
@@ -88,6 +90,13 @@ fn ring_icons() -> &'static [(&'static str, &'static str)] {
     icons::RING_ICONS
 }
 
+/// Whether the engine runs and reads this file: then a save is in effect at
+/// once.
+#[tauri::command]
+fn engine_status(state: tauri::State<'_, State>) -> engine::Status {
+    engine::status(&state.path)
+}
+
 #[tauri::command]
 fn set_dirty(state: tauri::State<'_, State>, dirty: bool) {
     state.dirty.store(dirty, Ordering::SeqCst);
@@ -137,6 +146,21 @@ fn alert(text: &str) {
     eprintln!("{text}");
 }
 
+/// The settings file a second launch asked for. Its `--dir` may be relative
+/// to the folder it started in, `cwd`.
+fn asked_file(args: Vec<String>, cwd: &str) -> Option<PathBuf> {
+    let mut args = args.into_iter().skip(1);
+    let mut resolved = Vec::new();
+    while let Some(arg) = args.next() {
+        let dir = (arg == "--dir").then(|| args.next()).flatten();
+        resolved.push(OsString::from(arg));
+        if let Some(dir) = dir {
+            resolved.push(Path::new(cwd).join(dir).into_os_string());
+        }
+    }
+    file::config_path(resolved).ok()
+}
+
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     let testing = args.iter().any(|a| a == "--dir");
@@ -154,14 +178,23 @@ fn main() -> ExitCode {
         alert(NO_WEBVIEW);
         return ExitCode::FAILURE;
     }
+    // While it lives, the engine leaves the "reloaded" message to this window.
+    let _mark = engine::mark(&path);
 
     let result = tauri::Builder::default()
         // First: a second launch only brings this window to the front.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             if let Some(window) = app.get_webview_window(WINDOW) {
                 let _ = window.unminimize();
                 let _ = window.show();
                 let _ = window.set_focus();
+            }
+            // Asked for another file (another --dir): this window keeps its
+            // own, and says so.
+            if let Some(asked) = asked_file(args, &cwd) {
+                if file_key(&asked) != file_key(&app.state::<State>().path) {
+                    let _ = app.emit("other-file", asked.display().to_string());
+                }
             }
         }))
         .plugin(tauri_plugin_dialog::init())
@@ -178,6 +211,7 @@ fn main() -> ExitCode {
             running_apps,
             app_name,
             browse,
+            engine_status,
             set_dirty,
             ready,
             close_window
