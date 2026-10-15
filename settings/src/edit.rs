@@ -332,6 +332,21 @@ fn ordered(fields: &Map<String, Json>) -> Vec<(&str, &Json)> {
     list
 }
 
+/// The same settings without the keys whose value is null, at any depth.
+pub fn without_nulls(value: &Json) -> Json {
+    match value {
+        Json::Object(fields) => Json::Object(
+            fields
+                .iter()
+                .filter(|(_, v)| !v.is_null())
+                .map(|(k, v)| (k.clone(), without_nulls(v)))
+                .collect(),
+        ),
+        Json::Array(items) => Json::Array(items.iter().map(without_nulls).collect()),
+        other => other.clone(),
+    }
+}
+
 /// What `base` becomes with the changes from `old` to `new`: what [`apply`]
 /// makes of a file whose settings are `base`. Lists are replaced whole.
 pub fn merged(base: &Json, old: &Json, new: &Json) -> Json {

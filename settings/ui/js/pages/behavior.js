@@ -3,13 +3,13 @@
 
 import { $, esc, icon as drawIcon, openDialog, sliderRow, toast } from '../ui.js';
 import { change, get, set, store } from '../store.js';
+import { BUTTON_NAMES } from '../commands.js';
 
 export const id = 'behavior';
 export const title = 'Behavior';
 export const icon = 'mouse-pointer-click';
 export const icons = ['move', 'circle-dot', 'mouse'];
 
-export const BUTTON_NAMES = { back: 'Back', forward: 'Forward', middle: 'Middle button' };
 /** `MouseEvent.button` to the names in the settings file. */
 const PRESSED = { 0: 'left', 1: 'middle', 2: 'right', 3: 'back', 4: 'forward' };
 const USES = { gestures: 'gestures', ring: 'the ring' };

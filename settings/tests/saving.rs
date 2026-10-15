@@ -126,3 +126,19 @@ fn a_file_with_a_syntax_error_does_not_open() {
     let error = Session::open(&path).err().expect("does not open");
     assert!(error.reason.contains("not valid TOML"), "{}", error.reason);
 }
+
+#[test]
+fn a_value_set_to_null_is_left_out() {
+    let dir = folder("null");
+    let path = dir.join("config.toml");
+    fs::write(&path, crlf(DEFAULT_FILE)).expect("write");
+
+    let mut session = Session::open(&path).expect("opens");
+    let mut settings = session.snapshot().settings;
+    // The interface clears an action's icon: the item shows its first letter.
+    settings["ring"]["slots"][0]["icon"] = serde_json::Value::Null;
+    let saved = session.save(&settings, false).expect("saves");
+    assert!(saved.settings["ring"]["slots"][0].get("icon").is_none());
+    let written = fs::read_to_string(&path).expect("read");
+    assert!(written.contains("name = \"Play or pause\"\r\ncommand = \"PlayPause\""));
+}

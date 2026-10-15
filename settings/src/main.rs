@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::Value as Json;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
-use thumbring_settings::file;
 use thumbring_settings::session::{OpenError, SaveError, Session, Snapshot};
+use thumbring_settings::{file, icons};
 
 const WINDOW: &str = "main";
 
@@ -50,6 +50,29 @@ fn save_settings(
     let snapshot = session.save(&settings, overwrite)?;
     state.dirty.store(false, Ordering::SeqCst);
     Ok(snapshot)
+}
+
+/// Asks for a file or a folder with the system's own dialog: `kind` is
+/// "app", "file" or "folder". `None` when cancelled.
+#[tauri::command]
+async fn browse(window: WebviewWindow, kind: String) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let dialog = window.dialog().file().set_parent(&window);
+    let picked = match kind.as_str() {
+        "folder" => dialog.blocking_pick_folder(),
+        "app" => dialog
+            .add_filter("Programs", &["exe", "com", "bat", "cmd", "lnk"])
+            .blocking_pick_file(),
+        _ => dialog.blocking_pick_file(),
+    };
+    let path = picked?.into_path().ok()?;
+    Some(path.display().to_string())
+}
+
+/// The ring's icons, as name and SVG text, in the engine's order.
+#[tauri::command]
+fn ring_icons() -> &'static [(&'static str, &'static str)] {
+    icons::RING_ICONS
 }
 
 #[tauri::command]
@@ -128,6 +151,7 @@ fn main() -> ExitCode {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(tauri_plugin_dialog::init())
         .manage(State {
             path,
             session: Mutex::new(None),
@@ -137,6 +161,8 @@ fn main() -> ExitCode {
         .invoke_handler(tauri::generate_handler![
             open_settings,
             save_settings,
+            ring_icons,
+            browse,
             set_dirty,
             ready,
             close_window

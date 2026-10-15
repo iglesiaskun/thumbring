@@ -6,4 +6,5 @@
 
 pub mod edit;
 pub mod file;
+pub mod icons;
 pub mod session;

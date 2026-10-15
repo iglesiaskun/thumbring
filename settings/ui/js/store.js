@@ -26,7 +26,8 @@ const listeners = new Set();
 function stable(value) {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
   if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(k => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
+    // A key set to null is the same as a missing key: saving leaves it out.
+    return `{${Object.keys(value).filter(k => value[k] != null).sort().map(k => `${JSON.stringify(k)}:${stable(value[k])}`).join(',')}}`;
   }
   return JSON.stringify(value);
 }

@@ -23,6 +23,8 @@ serde_json = { version = "1", features = ["preserve_order"] }
 tauri = { version = "2.12", features = [] }
 # A second launch brings the open window to the front.
 tauri-plugin-single-instance = "2"
+# The system's own dialog to pick a file or a folder ("Browse...").
+tauri-plugin-dialog = "2"
 # Edits the settings file in place, keeping the user's comments.
 toml_edit = "0.25"
 

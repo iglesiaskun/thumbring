@@ -123,6 +123,8 @@ impl Session {
     /// `overwrite`, a file changed outside is changed anyway: the values
     /// the interface changed win, and the others keep what the file has now.
     pub fn save(&mut self, settings: &Json, overwrite: bool) -> Result<Snapshot, SaveError> {
+        // A value set to null in the interface is a value left out.
+        let settings = &edit::without_nulls(settings);
         let current = file::read(&self.path).map_err(|e| SaveError::Io(e.to_string()))?;
         let (base, base_settings, warnings_before) = if current == self.bytes {
             (

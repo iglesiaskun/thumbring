@@ -1,18 +1,21 @@
 // The settings window: navigation, the save bar, and talking to the Rust side
 // (src/main.rs) through Tauri's `invoke`.
 
-import { $, $$, cancelDialog, dialog, esc, icon, loadIcons, toast } from './js/ui.js';
+import { $, $$, cancelDialog, closePop, dialog, esc, icon, isTyping, loadIcons, toast } from './js/ui.js';
 import { canRedo, canUndo, change, dirty, onChange, redo, reset, store, undo } from './js/store.js';
+import { loadRingIcons } from './js/ring-icons.js';
+import { invoke, listen } from './js/system.js';
+import * as ring from './js/pages/ring.js';
 import * as behavior from './js/pages/behavior.js';
 
-const PAGES = [behavior];
+// Each page: id, title, icon, icons (the ones it draws), mount(root) once,
+// render(root) after every change, and shown(root) when it comes on screen.
+const PAGES = [ring, behavior];
 const ICONS = ['circle-alert', 'undo-2', 'redo-2', ...PAGES.flatMap(p => [p.icon, ...(p.icons ?? [])])];
-
-const invoke = (command, args) => window.__TAURI__.core.invoke(command, args);
-const listen = (event, fn) => window.__TAURI__.event.listen(event, fn);
 
 let page = PAGES[0];
 let wasDirty = false;
+let mounted = false;
 
 /* ---------- Pages ---------- */
 
@@ -25,6 +28,7 @@ function buildNav() {
   });
   $('#content').innerHTML = PAGES.map(p => `<section class="page" id="pg-${p.id}" hidden></section>`).join('');
   for (const p of PAGES) p.mount($(`#pg-${p.id}`));
+  mounted = true;
 }
 
 function show(next) {
@@ -34,8 +38,10 @@ function show(next) {
     else b.removeAttribute('aria-current');
   }
   for (const p of PAGES) $(`#pg-${p.id}`).hidden = p !== page;
+  closePop();
   page.render($(`#pg-${page.id}`));
   $('#content').scrollTop = 0;
+  page.shown?.($(`#pg-${page.id}`));
 }
 
 /* ---------- Save bar and banner ---------- */
@@ -87,11 +93,11 @@ function showChangedOutside() {
 /* ---------- Reading and saving ---------- */
 
 async function open() {
+  let snapshot;
   try {
-    reset(await invoke('open_settings'));
-    showWarnings();
-    return true;
+    snapshot = await invoke('open_settings');
   } catch (e) {
+    if (e?.reason === undefined) throw e;
     $('#banner').hidden = true;
     $('#content').innerHTML = `<div class="card problem">
       <h1>The settings file can’t be read</h1>
@@ -102,6 +108,9 @@ async function open() {
     $('#retry').onclick = () => location.reload();
     return false;
   }
+  reset(snapshot);
+  showWarnings();
+  return true;
 }
 
 async function save(overwrite = false) {
@@ -147,12 +156,13 @@ async function askBeforeClosing() {
 
 /* ---------- Keyboard ---------- */
 
-const typing = () => document.activeElement?.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select');
+const typing = isTyping;
 
 window.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey, key = e.key.toLowerCase();
   if (mod && key === 's') { e.preventDefault(); if (!$('#btn-save').disabled) save(); return; }
-  if (e.key === 'Escape') { cancelDialog(); return; }
+  // Esc closes the popover or the dialog first; the pages see it as used.
+  if (e.key === 'Escape') { if (closePop() || cancelDialog()) e.preventDefault(); return; }
   // Browser shortcuts that make no sense in a settings window.
   if (e.key === 'F5' || (mod && ['r', 'p', 'f', 'g', 'j', 'u'].includes(key))) { e.preventDefault(); return; }
   if (!$('#scrim').hidden || typing()) return;
@@ -176,12 +186,16 @@ async function start() {
   $('#btn-undo').onclick = () => undo() && toast('Undone');
   $('#btn-redo').onclick = () => redo() && toast('Redone');
   onChange(render => {
-    if (render) page.render($(`#pg-${page.id}`));
+    if (render && mounted) page.render($(`#pg-${page.id}`));
     updateSaveBar();
   });
   listen('close-requested', askBeforeClosing);
+  $('#content').addEventListener('scroll', () => closePop(), { passive: true });
+  await loadRingIcons(invoke);
+  // The pages need the settings to build themselves.
+  if (!await open()) return;
   buildNav();
-  if (await open()) show(page);
+  show(page);
 }
 
 // The window starts hidden; it appears even if something above failed, so
