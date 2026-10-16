@@ -11,94 +11,58 @@ changed.
 
 ## [Unreleased]
 
-### Added
+## [0.1.0] - 2026-10-15
 
-- A settings window, `thumbring-settings.exe`: tray menu > Open settings. It
-  edits the ring with a live preview (drag actions onto the slots, folders,
-  icons, icon files of your own, and commands with a shortcut recorder), the
-  gestures, the apps and their profiles, the behavior, the appearance (with
-  presets and a "Show on my screen" button that shows the ring before it is
-  saved) and the animation, and saves to the same settings file, keeping its
-  comments. After a save it says whether the
-  Thumbring running now uses the new settings. While it is open, its own
-  message replaces the "Settings reloaded" notification. It needs the WebView2
-  Runtime, which comes with Windows 11 and with the updates of Windows 10.
-- "Start with Windows as administrator" in the tray menu, so gestures and the
-  ring also work in windows that run as administrator, such as Task Manager.
-  It asks for permission once (the UAC prompt) and creates a Task Scheduler
-  task that starts Thumbring with administrator rights at sign-in. The apps
-  Thumbring opens still run without administrator rights, and Back and
-  Forward presses simulated by other programs are ignored, so a program
-  without those rights cannot use Thumbring to reach windows that have them.
-  It and "Start with Windows" exclude each other.
-- Choose which mouse button runs the gestures and which opens the ring: Back,
-  Forward or the middle button (pressing the wheel), with `button` under
-  `[gestures]` and under `[ring]` in the settings file. Back and Forward stay
-  the defaults, so older settings files work as before. A quick tap, and the
-  `"native"` command in a gesture or a ring action, send the click of the
-  button that was held.
-- Change how the ring looks with the new, optional `[appearance]` section of
-  the settings file: the colors of the items, icons, highlight and cancel
-  button, the opacity of the items, the soft shadow, a light or dark label,
-  the size of the items (`item_size_px`) and their distance from the center
-  (`ring_radius_px`). Without the section, the ring looks as before.
-- Ring items can show an SVG or PNG file of your own as their icon: `icon`
-  also takes the full path of the file. An SVG follows the icon colors where
-  it uses `currentColor`. A file that is missing or cannot be read logs a
-  warning, and the item shows the first letter of its name.
-- When Thumbring crashes in native code, such as inside a Windows DLL, the
-  log now ends with a line that says which thread crashed, the exception code
-  and the module and offset where it happened, and the mouse buttons and the
-  tray icon are given back at once. Windows still handles the crash as usual.
-
-### Changed
-
-- Uninstalling the `.msi` also stops Thumbring from starting with Windows.
-- Releasing the ring button with the cursor on the center leaves the ring
-  open, as releasing it anywhere else does, so it no longer closes by
-  accident. A click on the center (×) closes it. In quick mode
-  (`execute_on_release = true`), releasing on the center still closes it.
-
-### Fixed
-
-- Quitting could, now and then, end Thumbring with a crash (an access
-  violation) instead of a clean exit.
-
-## [0.1.0] - 2026-10-14
-
-First public release. Thumbring 0.1.0 is configured through its settings file
-(`config.toml`); a visual settings editor is planned for 0.2.0.
+First public release. Thumbring gives any mouse on Windows 10 and 11 two
+things: gestures on the Back button and a ring of actions on the Forward
+button. A quick tap on either button still goes back or forward, as always.
 
 ### Added
 
-- Mouse gestures: hold the Back button, drag up, down, left or right and
-  release to run a command. A quick tap still goes back.
-- Action ring: hold the Forward button to open a ring of 8 slots around the
-  cursor. Each slot holds an action or a folder with up to 9 actions. The ring
-  is drawn on the GPU, with "viscous" (default) or "elastic" animations whose
-  speed and timings can be changed.
-- Commands for gestures and ring actions: keyboard shortcuts, media and volume
-  keys, opening apps, files, folders and URLs, and built-in actions
+- **Gestures.** Hold Back, drag up, down, left or right and release to run a
+  command. By default: Task View, show the desktop, and the next and previous
+  virtual desktop. Profiles change the gestures in the apps you choose.
+- **Action ring.** Hold Forward to open a ring of 8 slots around the cursor.
+  Each slot holds an action or a folder with up to 9 actions. The ring is
+  drawn on the GPU, with smooth animations whose style and speed you can
+  change.
+- **Settings window.** Tray menu > Open settings edits the ring with a live
+  preview (drag actions onto the slots, pick icons or use your own SVG or PNG,
+  record shortcuts), the gestures, the apps and their profiles, the behavior,
+  the colors and size of the ring and the animation. "Show on my screen" shows
+  the ring before you save. Everything is kept in one settings file, which you
+  can also edit by hand; the window keeps its comments.
+- **Commands** for gestures and ring actions: keyboard shortcuts, media and
+  volume keys, opening apps, files, folders and URLs, and built-in actions
   (screenshot, emoji panel, File Explorer, lock screen).
-- Per-app gesture profiles, a list of apps where Thumbring stays off, and no
-  gestures while an app is fullscreen.
-- Settings file at `%APPDATA%\thumbring\config.toml`, created with comments on
-  the first run and reloaded on every save. Invalid values fall back to their
-  defaults; problems go to the log and to a tray notification, once.
-- `version = 1` at the top of the settings file, so later versions can update
-  older files when the format changes. A file without it counts as version 1.
-- Tray icon to pause and resume, open the settings file and the log, start
-  with Windows and quit. On the first run, a notification says where it is.
-- The mouse hook is installed again after sleep, after unlocking the session
-  and when the display turns on, in case Windows removed it.
-- On an unexpected error, Thumbring writes it to the log, gives the mouse
-  buttons back and quits with a message.
-- Release files: a portable `.zip` and an `.msi` installer for the current
-  user, with `SHA256SUMS`, build provenance attestations and the licenses of
-  the third-party crates.
+- **Any button for either job**: Back, Forward or the middle button (pressing
+  the wheel), for mice without side buttons.
+- **Stays out of the way**: it turns itself off in the apps you exclude and
+  while an app is fullscreen, and pauses with one click on the tray icon.
+  Settings apply as soon as they are saved; a wrong value falls back to its
+  default and says so once, in a notification.
+- **Start with Windows**, from the tray menu, normally or as administrator.
+- **Downloads**: an `.msi` that installs for your user only, without
+  administrator rights, and a portable `.zip`. Both come with `SHA256SUMS`,
+  build provenance attestations and the licenses of the third-party code.
 
-Gestures and the ring do not work in windows that run as administrator yet;
-see "Known limitations" in the README.
+### Known limitations
+
+- The files are not code-signed yet, so Windows SmartScreen ("Windows
+  protected your PC") and some antivirus programs may warn about them. The
+  README explains how to check a download.
+- Windows that run as administrator, such as Task Manager, do not get gestures
+  or the ring unless Thumbring runs as administrator too. Read the trade-off
+  in the README before turning that on.
+- The settings window needs the WebView2 Runtime. Windows 11 has it, and
+  Windows Update installs it on most Windows 10 computers; where it is
+  missing, the window says where to get it, and Thumbring itself keeps
+  working.
+- Some anti-cheat systems flag programs that hook the mouse. Pause Thumbring
+  or exclude the game before playing online.
+- If your mouse's own software remaps the side buttons, Thumbring no longer
+  sees them as Back and Forward.
+- Windows only, and the interface is in English.
 
 [unreleased]: https://github.com/iglesiaskun/thumbring/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/iglesiaskun/thumbring/releases/tag/v0.1.0
