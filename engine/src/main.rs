@@ -115,6 +115,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         );
     }
     crash::install(paths.log_file.clone());
+    crash::install_exception_filter();
     info!("engine {} starting", env!("CARGO_PKG_VERSION"));
     if elevation::is_elevated() {
         info!("running as administrator; apps open through File Explorer, without those rights");

@@ -46,6 +46,10 @@ changed.
   also takes the full path of the file. An SVG follows the icon colors where
   it uses `currentColor`. A file that is missing or cannot be read logs a
   warning, and the item shows the first letter of its name.
+- When Thumbring crashes in native code, such as inside a Windows DLL, the
+  log now ends with a line that says which thread crashed, the exception code
+  and the module and offset where it happened, and the mouse buttons and the
+  tray icon are given back at once. Windows still handles the crash as usual.
 
 ### Changed
 
