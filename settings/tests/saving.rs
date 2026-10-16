@@ -142,3 +142,79 @@ fn a_value_set_to_null_is_left_out() {
     let written = fs::read_to_string(&path).expect("read");
     assert!(written.contains("name = \"Play or pause\"\r\ncommand = \"PlayPause\""));
 }
+
+#[test]
+fn without_a_ring_radius_the_ring_follows_the_item_size() {
+    let dir = folder("radius");
+    let path = dir.join("config.toml");
+    fs::write(&path, crlf(DEFAULT_FILE)).expect("write");
+
+    let mut session = Session::open(&path).expect("opens");
+    let mut settings = session.snapshot().settings;
+    // The interface leaves the radius out to keep it automatic.
+    settings["appearance"]["item_size_px"] = json!(60);
+    settings["appearance"]["ring_radius_px"] = serde_json::Value::Null;
+    let saved = session.save(&settings, false).expect("saves");
+    assert_eq!(saved.settings["appearance"]["ring_radius_px"], json!(108.0));
+    let written = fs::read_to_string(&path).expect("read");
+    assert!(written.contains("item_size_px = 60 "));
+    assert!(written.contains("# ring_radius_px = 93.6\r\n"));
+    assert!(!written.contains("\r\nring_radius_px"));
+
+    // A radius of its own is written, and taken out again.
+    let mut settings = saved.settings;
+    settings["appearance"]["ring_radius_px"] = json!(150);
+    let saved = session.save(&settings, false).expect("saves");
+    assert!(
+        fs::read_to_string(&path)
+            .expect("read")
+            .contains("\r\nring_radius_px = 150")
+    );
+    let mut settings = saved.settings;
+    settings["appearance"]["ring_radius_px"] = serde_json::Value::Null;
+    session.save(&settings, false).expect("saves");
+    assert!(
+        !fs::read_to_string(&path)
+            .expect("read")
+            .contains("\r\nring_radius_px")
+    );
+}
+
+#[test]
+fn a_draft_shows_the_changes_without_writing_them() {
+    let dir = folder("draft");
+    let path = dir.join("config.toml");
+    fs::write(&path, crlf(DEFAULT_FILE)).expect("write");
+
+    let session = Session::open(&path).expect("opens");
+    let mut settings = session.snapshot().settings;
+    settings["appearance"]["item_color"] = json!("#1F2026");
+    let draft = session.draft(&settings).expect("drafts");
+    assert!(draft.contains("item_color = \"#1F2026\""));
+    assert_eq!(fs::read_to_string(&path).expect("read"), crlf(DEFAULT_FILE));
+}
+
+#[test]
+fn a_missing_icon_file_is_a_warning_as_in_the_engine() {
+    let dir = folder("icon");
+    let path = dir.join("config.toml");
+    let missing = dir.join("star.svg");
+    let text = crlf(DEFAULT_FILE).replacen(
+        "icon = \"play\"",
+        &format!("icon = '{}'", missing.display()),
+        1,
+    );
+    fs::write(&path, text).expect("write");
+
+    let session = Session::open(&path).expect("opens");
+    let snapshot = session.snapshot();
+    assert!(snapshot.settings["ring"]["slots"][0].get("icon").is_none());
+    assert!(
+        snapshot
+            .warnings
+            .iter()
+            .any(|w| w.contains("was not found")),
+        "{:?}",
+        snapshot.warnings
+    );
+}

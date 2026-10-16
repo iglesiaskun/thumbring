@@ -7,7 +7,7 @@
 import { $, $$, esc, icon as drawIcon, isTyping, openPop, closePop, toast } from '../ui.js';
 import { change, store, undo } from '../store.js';
 import { createRingStage, STAGE_ICONS } from '../ring-stage.js';
-import { itemGlyph, ringIconNames, ringSvg } from '../ring-icons.js';
+import { iconFileName, isIconFile, itemGlyph, ringIconNames, ringSvg } from '../ring-icons.js';
 import { BUTTON_NAMES, COMMAND_ICONS, commandHTML, commandShort } from '../commands.js';
 import { BUILDER_ICONS, chooseCommand } from '../command-builder.js';
 import { browse } from '../system.js';
@@ -15,7 +15,7 @@ import { browse } from '../system.js';
 export const id = 'ring';
 export const title = 'Ring';
 export const icon = 'circle-dot';
-export const icons = [...STAGE_ICONS, ...COMMAND_ICONS, ...BUILDER_ICONS, 'chevron-left', 'chevron-right', 'trash-2', 'folder-plus', 'arrow-up', 'arrow-down', 'rotate-ccw'];
+export const icons = [...STAGE_ICONS, ...COMMAND_ICONS, ...BUILDER_ICONS, 'chevron-left', 'chevron-right', 'trash-2', 'folder-plus', 'arrow-up', 'arrow-down', 'rotate-ccw', 'image'];
 
 const SLOT_POS = ['top', 'top right', 'right', 'bottom right', 'bottom', 'bottom left', 'left', 'top left'];
 const FOLDER_MAX = 9;
@@ -112,6 +112,7 @@ export function mount(pageRoot) {
     mode: 'edit',
     getSlots: () => slots(),
     getAnim: () => store.settings.animation,
+    getLook: () => store.settings.appearance,
     reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches && !store.settings.animation.ignore_system_reduced_motion,
     isDragging: () => !!drag?.started,
     onPointerDown: (t, e) => {
@@ -180,7 +181,7 @@ function nameField(it, hint) {
 
 function iconField(it) {
   return `<div class="field"><span class="flabel" id="lbl-icon">Icon</span>
-    <button type="button" class="icon-btn" data-act="icon" aria-labelledby="lbl-icon"><span class="icon-prev">${itemGlyph(it)}</span><span class="nm">${it.icon ? esc(it.icon) : 'First letter of the name'}</span><span class="go">Change</span></button></div>`;
+    <button type="button" class="icon-btn" data-act="icon" aria-labelledby="lbl-icon" ${isIconFile(it.icon) ? `title="${esc(it.icon)}"` : ''}><span class="icon-prev">${itemGlyph(it)}</span><span class="nm">${!it.icon ? 'First letter of the name' : esc(isIconFile(it.icon) ? iconFileName(it.icon) : it.icon)}</span><span class="go">Change</span></button></div>`;
 }
 
 function commandField(it) {
@@ -322,13 +323,21 @@ async function onInspectorClick(e) {
 }
 
 function pickIcon(anchor, current, onPick) {
-  const names = ringIconNames();
+  const names = ringIconNames(), file = isIconFile(current) ? current : null;
   const html = `<p class="pop-title">Icon</p><div class="icongrid">${names.map(n =>
       `<button type="button" data-icon="${n}" title="${n}" aria-label="${n}" aria-pressed="${current === n}">${ringSvg(n)}</button>`).join('')}
     <button type="button" data-icon="" class="aa" title="First letter of the name" aria-label="First letter of the name" aria-pressed="${!current}">Aa</button></div>
-    <p class="pop-note">The icons the ring can draw. Aa shows the first letter of the name.</p>`;
+    <div class="pop-file">${file ? `<span class="mini">${itemGlyph({ icon: file, name: '?' })}</span><span class="nm" title="${esc(file)}">${esc(iconFileName(file))}</span>` : ''}
+      <button type="button" class="btn sm" data-file>${drawIcon('image')}${file ? 'Another file…' : 'A file of your own…'}</button></div>
+    <p class="pop-note">Aa shows the first letter of the name. A file of your own can be an SVG, which takes the icon colors from Appearance, or a PNG, which keeps its own.</p>`;
   openPop(anchor, html, el => {
-    el.addEventListener('click', e => {
+    el.addEventListener('click', async e => {
+      if (e.target.closest('[data-file]')) {
+        closePop();
+        const path = await browse('icon');
+        if (path) onPick(path);
+        return;
+      }
       const b = e.target.closest('[data-icon]');
       if (!b) return;
       closePop();

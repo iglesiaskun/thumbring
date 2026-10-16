@@ -259,6 +259,8 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-r
 .icongrid button[aria-pressed="true"] { border-color: var(--fill); background: var(--card-2); }
 .icongrid svg { width: 18px; height: 18px; }
 .icongrid .aa { font-size: 13px; font-weight: 600; }
+.pop-file { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.pop-file .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
 
 /* ---------- Gestures page ---------- */
 .stack { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -345,6 +347,32 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-r
   .a-stage-col { position: static; }
 }
 
+/* ---------- Appearance page ---------- */
+.ph-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px 16px 14px; }
+.preset { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--field); cursor: pointer; text-align: left; }
+.preset:hover { border-color: var(--ink-3); }
+.preset[aria-pressed="true"] { border-color: var(--fill); box-shadow: inset 0 0 0 1px var(--fill); }
+.preset b { display: block; font-size: 13.5px; }
+.preset small { display: block; color: var(--ink-2); font-size: 11.5px; }
+/* A tiny ring on the light wallpaper: three items and the highlight. */
+.swatch { position: relative; flex: none; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: linear-gradient(162deg, #A3C6F1, #3D7FDC); }
+.swatch i { position: absolute; width: 14px; height: 14px; border-radius: 50%; }
+.swatch i:nth-child(1) { left: 4px; top: 13px; }
+.swatch i:nth-child(2) { left: 13px; top: 4px; }
+.swatch i:nth-child(3) { left: 22px; top: 13px; }
+.swatch i:nth-child(4) { left: 13px; top: 22px; }
+.crow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 11px 16px; }
+.crow .row-text { min-width: 150px; }
+.colorpick { display: inline-flex; align-items: center; gap: 8px; }
+.colorpick input[type="color"] { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--field); cursor: pointer; }
+.colorpick .input { width: 96px; font-family: var(--font-mono); font-size: 12.5px; text-transform: uppercase; }
+.look-warn { margin: 0; padding: 10px 16px 12px; }
+.sub-tgl { padding: 0 16px 13px; font-size: 13px; }
+/* The wallpaper of the preview, chosen instead of following the theme. */
+.stage.wall-light { --wall-1: #E4EEFA; --wall-2: #A3C6F1; --wall-3: #3D7FDC; --wall-glow: #1E5ECE; --wall-sun: #F8F3EA; }
+.stage.wall-dark { --wall-1: #23104E; --wall-2: #591A92; --wall-3: #A22A9B; --wall-glow: #E2418F; --wall-sun: #3A1478; }
+
 /* ---------- Ring page ---------- */
 .ring-grid { display: grid; grid-template-columns: minmax(0, 1fr) 312px; gap: 16px; align-items: start; }
 .ring-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -364,7 +392,10 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-r
 .overlay { z-index: 2; }
 .icons { z-index: 3; }
 .ico { position: absolute; left: 0; top: 0; width: var(--d, 52px); height: var(--d, 52px); display: grid; place-items: center; color: var(--item-ink); opacity: 0; transform-origin: 50% 50%; will-change: transform, opacity; }
-.ico svg { width: 40%; height: 40%; stroke-width: 1.9; }
+.ico svg, .ico .png { width: 40%; height: 40%; }
+.ico svg:not(.user-icon) { stroke-width: 1.9; }
+/* A PNG of the user's own keeps its colors and its proportions. */
+.png { object-fit: contain; }
 .ico.center svg { width: 26%; height: 26%; stroke-width: 2.4; }
 .ico.on { color: var(--item-ink-on); }
 .ico.center.on { color: #FFFFFF; }
@@ -398,9 +429,9 @@ kbd { font-family: var(--font-mono); font-size: 12px; padding: 1px 7px; border-r
 .icon-btn:hover { border-color: var(--ink-3); }
 .icon-prev, .mini { flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--card-2); border: 1px solid var(--line); color: var(--ink); }
 .icon-prev { width: 36px; height: 36px; }
-.icon-prev svg { width: 18px; height: 18px; }
+.icon-prev svg, .icon-prev .png { width: 18px; height: 18px; }
 .mini { width: 28px; height: 28px; }
-.mini svg { width: 14px; height: 14px; }
+.mini svg, .mini .png { width: 14px; height: 14px; }
 .mini .letter, .icon-prev .letter { font-size: 13px; }
 .icon-btn .nm { flex: 1; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-2); min-width: 0; overflow-wrap: anywhere; }
 .icon-btn .go { font-size: 13px; color: var(--ink-2); }

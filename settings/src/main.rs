@@ -8,14 +8,16 @@
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::{fs, thread};
 
 use serde_json::Value as Json;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use thumbring_core::instance::file_key;
 use thumbring_settings::apps::{self, RunningApp};
+use thumbring_settings::icons::IconFile;
 use thumbring_settings::session::{OpenError, SaveError, Session, Snapshot};
 use thumbring_settings::{engine, file, icons};
 
@@ -66,6 +68,9 @@ async fn browse(window: WebviewWindow, kind: String) -> Option<String> {
         "app" => dialog
             .add_filter("Programs", &["exe", "com", "bat", "cmd", "lnk"])
             .blocking_pick_file(),
+        "icon" => dialog
+            .add_filter("Icons", &["svg", "png"])
+            .blocking_pick_file(),
         _ => dialog.blocking_pick_file(),
     };
     let path = picked?.into_path().ok()?;
@@ -82,6 +87,54 @@ fn running_apps() -> Vec<RunningApp> {
 #[tauri::command]
 fn app_name(text: String) -> Option<String> {
     apps::app_name(&text)
+}
+
+/// An icon file of the user's own, for the interface to draw.
+#[tauri::command]
+fn icon_file(path: String) -> Result<IconFile, String> {
+    icons::read_file(&path)
+}
+
+/// The engine, shipped next to this window.
+const ENGINE_EXE: &str = if cfg!(windows) {
+    "thumbring.exe"
+} else {
+    "thumbring"
+};
+
+/// Shows the ring with these settings, saved or not, on the screen: the
+/// engine draws it for a few seconds, from a copy of the file with these
+/// changes in a folder of its own.
+#[tauri::command]
+fn show_on_screen(state: tauri::State<'_, State>, settings: Json) -> Result<(), String> {
+    static RUNS: AtomicU32 = AtomicU32::new(0);
+    let draft = {
+        let session = state.session.lock().expect("no panics while locked");
+        let session = session.as_ref().ok_or("the settings were not read yet")?;
+        session.draft(&settings)?
+    };
+    let engine = std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.join(ENGINE_EXE)))
+        .filter(|path| path.is_file())
+        .ok_or(format!("{ENGINE_EXE} is not next to this window"))?;
+    // A folder for each run: one run cleans up after itself while the next
+    // one reads its own copy.
+    let run = RUNS.fetch_add(1, Ordering::SeqCst);
+    let dir = std::env::temp_dir().join(format!("thumbring-preview-{}-{run}", std::process::id()));
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    fs::write(dir.join("config.toml"), draft).map_err(|e| e.to_string())?;
+    let mut child = Command::new(engine)
+        .arg("--preview-ring")
+        .arg("--dir")
+        .arg(&dir)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    thread::spawn(move || {
+        let _ = child.wait();
+        let _ = fs::remove_dir_all(&dir);
+    });
+    Ok(())
 }
 
 /// The ring's icons, as name and SVG text, in the engine's order.
@@ -211,6 +264,8 @@ fn main() -> ExitCode {
             running_apps,
             app_name,
             browse,
+            icon_file,
+            show_on_screen,
             engine_status,
             set_dirty,
             ready,

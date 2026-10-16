@@ -15,9 +15,11 @@ changed.
 
 - A settings window, `thumbring-settings.exe`: tray menu > Open settings. It
   edits the ring with a live preview (drag actions onto the slots, folders,
-  icons, and commands with a shortcut recorder), the gestures, the apps and
-  their profiles, the behavior and the animation, and saves to the same
-  settings file, keeping its comments. After a save it says whether the
+  icons, icon files of your own, and commands with a shortcut recorder), the
+  gestures, the apps and their profiles, the behavior, the appearance (with
+  presets and a "Show on my screen" button that shows the ring before it is
+  saved) and the animation, and saves to the same settings file, keeping its
+  comments. After a save it says whether the
   Thumbring running now uses the new settings. While it is open, its own
   message replaces the "Settings reloaded" notification. It needs the WebView2
   Runtime, which comes with Windows 11 and with the updates of Windows 10.

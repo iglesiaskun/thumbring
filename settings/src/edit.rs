@@ -89,7 +89,14 @@ fn apply_section(
             let child = subsection(&mut section, key, &key_path)?;
             apply_section(child, before, fields, &key_path)?;
         } else {
-            set_value(section.entries(), key, to_toml(value, before, &key_path)?);
+            // A whole number stays whole where the file has one: 60, not 60.0.
+            let whole = section
+                .entries()
+                .get(key)
+                .and_then(Item::as_value)
+                .is_some_and(Value::is_integer);
+            let like = if whole { None } else { before };
+            set_value(section.entries(), key, to_toml(value, like, &key_path)?);
         }
     }
     for key in old.keys().filter(|k| !new.contains_key(*k)) {

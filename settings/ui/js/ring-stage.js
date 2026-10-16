@@ -37,10 +37,14 @@ const rgb = hex => {
   return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
 };
 
-/** The ring as the engine draws it today: white items, a near-black highlight. */
+/** The ring radius when the settings set none: 1.8 items, to a tenth of a pixel. */
+export const defaultRadius = itemSize => Math.round(itemSize * 18) / 10;
+
+/** The default appearance (core/src/config.rs): white items, a near-black highlight. */
 export const CLASSIC = {
   item_color: '#FFFFFF', item_opacity: 0.96, icon_color: '#2A2B31', highlight_color: '#121214',
-  highlight_icon_color: '#FFFFFF', cancel_color: '#E64054', size: 1, shadow: true, label: 'light',
+  highlight_icon_color: '#FFFFFF', cancel_color: '#E64054', item_size_px: 52, ring_radius_px: 93.6,
+  shadow: true, label: 'light',
 };
 
 /* ---------- The state machine (core/src/ring_machine.rs) ---------- */
@@ -197,7 +201,8 @@ const MAXW = 32, MAXD = 24, NECK = 6;
  * - slowmo(), reduced(): slower or shorter animations
  * - edit: isDragging(), onPointerDown(target, event), onRemove(target)
  * - demo: getBehavior(), active(), blocked(), triggerButton(), triggerName(), autoReopen
- * - sizeRoom: zooms out so items up to this size (in Appearance) still fit
+ * - onFit(ratio): the ring is drawn at this part of its real size (1 when it
+ *   fits the preview)
  */
 export function createRingStage(root, o) {
   const edit = o.mode === 'edit';
@@ -207,14 +212,18 @@ export function createRingStage(root, o) {
   const wBuf = new Float32Array(MAXW * 4), dBuf = new Float32Array(MAXD * 4);
   let SL = o.getSlots(), dpr = 1, GL = null, ctx2d = null;
   const A = () => o.getAnim();
-  const LK = () => o.getLook?.() ?? CLASSIC;
+  // Without a radius of its own, the ring radius follows the item size.
+  const LK = () => {
+    const L = o.getLook?.() ?? CLASSIC;
+    return L.ring_radius_px == null ? { ...L, ring_radius_px: defaultRadius(L.item_size_px) } : L;
+  };
   const beh = () => o.getBehavior?.() ?? {};
   const dur = ms => (ms * (o.slowmo?.() ? 5 : 1) * (o.reduced?.() ? 0.35 : 1)) / A().speed;
 
   /* ---------- appearance: icon and label colors, size ---------- */
   let lookKey = '';
   function applyLook() {
-    const L = LK(), key = [L.icon_color, L.highlight_icon_color, L.label, L.size, root.clientWidth, root.clientHeight].join('|');
+    const L = LK(), key = [L.icon_color, L.highlight_icon_color, L.label, L.item_size_px, L.ring_radius_px, root.clientWidth, root.clientHeight].join('|');
     if (key === lookKey) return;
     lookKey = key;
     root.style.setProperty('--item-ink', L.icon_color);
@@ -236,11 +245,18 @@ export function createRingStage(root, o) {
   function ghostRel(slot) { const n = nItems(slot), a = n === 0 ? slotAngle(slot) : slotAngle(slot) + (n - (n - 1) / 2) * G.spacing; return { x: Math.cos(a) * G.R2, y: Math.sin(a) * G.R2 }; }
   function computeGeometry(w, h) {
     if (!w || !h) return;
-    // 52 px at 100% scaling, times the size from Appearance.
-    const fit = (Math.min(w, h) - 24) / 8.4;
-    const D = clamp(Math.min(52, fit / (o.sizeRoom || 1)) * LK().size, 22, Math.max(22, fit));
-    G.D = D; G.r = D / 2; G.R = 1.8 * D; G.R2 = 2 * G.R; G.rc = 0.35 * D; G.zone = 0.45 * G.R;
+    // The real size from Appearance, unless the preview is too small for the
+    // open folder arc: then the ring shrinks as a whole, as on a small monitor
+    // (Geometry::for_monitor).
+    const L = LK(), size = L.item_size_px, perItem = L.ring_radius_px / size;
+    const fits = (Math.min(w, h) - 24) / (4 * perItem + 1.2);
+    const D = Math.max(Math.min(size, fits), 20);
+    G.D = D; G.r = D / 2; G.R = perItem * D; G.R2 = 2 * G.R; G.rc = 0.35 * D; G.zone = 0.45 * G.R;
+    // Children at least 22.5° apart, more if they would touch (Geometry::with_radius).
+    const closest = (1 + 0.14) * D / (2 * G.R2);
+    G.spacing = clamp(2 * Math.asin(Math.min(closest, 1)), Math.PI / 8, 2 * Math.PI / 9);
     root.style.setProperty('--d', D + 'px');
+    o.onFit?.(D / size);
   }
 
   /* ---------- state ---------- */

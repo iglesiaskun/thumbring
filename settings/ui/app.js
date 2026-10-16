@@ -3,18 +3,19 @@
 
 import { $, $$, cancelDialog, closePop, dialog, esc, icon, isTyping, loadIcons, toast } from './js/ui.js';
 import { canRedo, canUndo, change, dirty, onChange, redo, reset, store, undo } from './js/store.js';
-import { loadRingIcons } from './js/ring-icons.js';
+import { forgetIconFiles, loadRingIcons } from './js/ring-icons.js';
 import { engineStatus, invoke, listen } from './js/system.js';
 import * as ring from './js/pages/ring.js';
 import * as gestures from './js/pages/gestures.js';
 import * as apps from './js/pages/apps.js';
 import * as behavior from './js/pages/behavior.js';
+import * as appearance from './js/pages/appearance.js';
 import * as animation from './js/pages/animation.js';
 
 // Each page: id, title, icon, icons (the ones it draws), mount(root) once,
 // render(root) after every change and shown(root) when it comes on screen.
 // A page may also list problems() to fix before saving, and reveal(problem).
-const PAGES = [ring, gestures, apps, behavior, animation];
+const PAGES = [ring, gestures, apps, behavior, appearance, animation];
 const ICONS = ['circle-alert', 'undo-2', 'redo-2', ...PAGES.flatMap(p => [p.icon, ...(p.icons ?? [])])];
 
 let page = PAGES[0];
@@ -114,6 +115,8 @@ async function open() {
     $('#retry').onclick = () => location.reload();
     return false;
   }
+  // Pictures may have changed since they were read.
+  forgetIconFiles();
   reset(snapshot);
   showWarnings();
   return true;
@@ -239,6 +242,8 @@ async function start() {
   });
   listen('close-requested', askBeforeClosing);
   listen('other-file', e => otherFileAsked(e.payload));
+  // An icon file was read: draw it where it shows.
+  window.addEventListener('thumbring:icons', () => { if (mounted) page.render($(`#pg-${page.id}`)); });
   $('#content').addEventListener('scroll', () => closePop(), { passive: true });
   window.addEventListener('thumbring:goto', e => {
     const next = PAGES.find(p => p.id === e.detail);

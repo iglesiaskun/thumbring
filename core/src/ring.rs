@@ -15,6 +15,10 @@ pub const SLOT_COUNT: usize = 8;
 /// Maximum number of actions inside a folder.
 pub const FOLDER_MAX_ITEMS: usize = 9;
 
+/// Icon files bigger than this are refused: an icon needs far less, and a
+/// huge picture would hold up the ring while it loads.
+pub const MAX_ICON_FILE_BYTES: u64 = 2 * 1024 * 1024;
+
 /// Icon names an item can use: the Lucide icons the engine embeds. A test in
 /// the engine makes sure this list and the embedded files are the same.
 pub const ICONS: [&str; 29] = [

@@ -312,8 +312,8 @@ the options.
 
 **Is there a settings window?**
 Yes, from the next version: tray menu > Open settings. It shows your ring with
-a live preview, the gestures, the apps and their profiles, the behavior and
-the animation. It is a separate program, `thumbring-settings.exe`, next to
+a live preview, the gestures, the apps and their profiles, the behavior, the
+appearance and the animation. It is a separate program, `thumbring-settings.exe`, next to
 `thumbring.exe`, and needs the WebView2 Runtime, which comes with Windows 11
 and with the updates of Windows 10. It saves to the same settings file and
 keeps its comments.

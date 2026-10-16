@@ -9,9 +9,8 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-/// Icon files bigger than this are refused: an icon needs far less, and a
-/// huge picture would hold up the ring while it loads.
-pub const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
+/// Icon files bigger than this are refused.
+pub use thumbring_core::ring::MAX_ICON_FILE_BYTES as MAX_FILE_BYTES;
 
 macro_rules! icons {
     ($($name:literal),* $(,)?) => {

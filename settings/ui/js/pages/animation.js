@@ -67,6 +67,7 @@ export function mount(pageRoot) {
     mode: 'demo',
     getSlots: () => store.settings.ring.slots,
     getAnim: () => store.settings.animation,
+    getLook: () => store.settings.appearance,
     getBehavior: () => {
       const b = store.settings.behavior;
       return { openWith: b.open_with, executeOnRelease: b.execute_on_release, holdMs: b.hold_to_open_ms, intentMs: b.path_tolerance_ms };

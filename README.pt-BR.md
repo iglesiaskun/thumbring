@@ -322,7 +322,7 @@ acima, explica as opções.
 **Tem uma janela de configurações?**
 Tem, a partir da próxima versão: menu da bandeja > Open settings. Ela mostra o
 seu anel com uma prévia ao vivo, os gestos, os apps e os perfis deles, o
-comportamento e a animação. É um programa à parte, o
+comportamento, a aparência e a animação. É um programa à parte, o
 `thumbring-settings.exe`, ao lado do `thumbring.exe`, e precisa do WebView2
 Runtime, que vem com o Windows 11 e com as atualizações do Windows 10. Ela
 grava no mesmo arquivo de configuração e mantém os comentários dele.

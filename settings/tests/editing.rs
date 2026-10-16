@@ -72,6 +72,25 @@ fn a_changed_value_keeps_its_comment_in_the_same_column() {
 }
 
 #[test]
+fn whole_numbers_stay_whole_where_the_file_has_one() {
+    // The item size is a decimal number for the engine, written as 52.
+    let text = template();
+    let out = edited(&text, |s| {
+        s["appearance"]["item_size_px"] = json!(60);
+        // The radius the engine works out for 60 px items, set on purpose.
+        s["appearance"]["ring_radius_px"] = json!(108);
+    });
+    assert!(
+        has_line(
+            &out,
+            "item_size_px = 60                 # item diameter at 100% scaling, 32 to 96"
+        ),
+        "{out}"
+    );
+    assert!(has_line(&out, "ring_radius_px = 108.0"), "{out}");
+}
+
+#[test]
 fn decimals_stay_decimals() {
     // JavaScript writes 2.0 as 2.
     let text = template();

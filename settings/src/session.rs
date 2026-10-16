@@ -13,10 +13,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use serde_json::{Value as Json, json};
-use thumbring_core::config::{BlobStyle, Config, DEFAULT_FILE};
+use thumbring_core::config::{Appearance, BlobStyle, Config, DEFAULT_FILE};
 use toml_edit::DocumentMut;
 
-use crate::{edit, file};
+use crate::{edit, file, icons};
 
 const BOM: &str = "\u{feff}";
 
@@ -168,7 +168,7 @@ impl Session {
         }
         if !edit::same(
             &saved,
-            &edit::merged(&base_settings, &self.settings, settings),
+            &with_derived(edit::merged(&base_settings, &self.settings, settings)),
         ) {
             return Err(SaveError::Invalid(vec![
                 "the file would not say what the editor shows".into(),
@@ -187,6 +187,32 @@ impl Session {
         self.warnings = warnings;
         Ok(self.snapshot())
     }
+
+    /// The file as saving `settings` would leave it, without writing it: for
+    /// the engine to show the ring before it is saved.
+    pub fn draft(&self, settings: &Json) -> Result<String, String> {
+        let settings = &edit::without_nulls(settings);
+        let mut doc: DocumentMut = self
+            .text
+            .body
+            .parse()
+            .map_err(|e| format!("the settings file is not valid TOML: {e}"))?;
+        edit::apply(&mut doc, &self.settings, settings).map_err(|e| e.to_string())?;
+        Ok(doc.to_string())
+    }
+}
+
+/// Fills in what the engine works out when the file leaves it out: without
+/// `ring_radius_px`, the ring radius follows the item size.
+fn with_derived(mut settings: Json) -> Json {
+    if let Some(look) = settings.get_mut("appearance").and_then(Json::as_object_mut) {
+        let size = look.get("item_size_px").and_then(Json::as_f64);
+        if let (None, Some(size)) = (look.get("ring_radius_px"), size) {
+            let radius = Appearance::default_ring_radius_px(size);
+            look.insert("ring_radius_px".into(), json!(radius));
+        }
+    }
+    settings
 }
 
 /// The ranges the engine accepts, so the interface never offers others.
@@ -206,6 +232,10 @@ fn limits() -> Json {
         "animation.viscosity": [*VISCOSITY.start(), *VISCOSITY.end()],
         "animation.break_at": [*BREAK_AT.start(), *BREAK_AT.end()],
         "animation.wobble": [*WOBBLE.start(), *WOBBLE.end()],
+        "appearance.item_opacity": [*ITEM_OPACITY.start(), *ITEM_OPACITY.end()],
+        "appearance.item_size_px": [*ITEM_SIZE_PX.start(), *ITEM_SIZE_PX.end()],
+        // In item sizes: the radius range follows the item size.
+        "appearance.ring_radius_per_item": [*RING_RADIUS_PER_ITEM.start(), *RING_RADIUS_PER_ITEM.end()],
     })
 }
 
@@ -225,7 +255,8 @@ fn blob_presets() -> Json {
 
 /// The settings as the engine reads them, and its warnings.
 fn read_settings(text: &str) -> Result<(Json, Vec<String>), String> {
-    let loaded = Config::from_toml(text).map_err(|e| e.to_string())?;
+    let mut loaded = Config::from_toml(text).map_err(|e| e.to_string())?;
+    loaded.check_icon_files(|path, _| icons::check_file(path).map(drop));
     let warnings = loaded.warnings.iter().map(ToString::to_string).collect();
     let settings = serde_json::to_value(&loaded.config).map_err(|e| e.to_string())?;
     Ok((settings, warnings))
