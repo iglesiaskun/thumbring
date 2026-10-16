@@ -248,11 +248,11 @@ pub fn reduce(s: State, event: Event, cfg: &Behavior) -> (State, Vec<Effect>) {
             let mut fx = vec![];
 
             // Left the item that was waiting for the tolerance: give up on it.
-            if let Some(p) = n.pending {
-                if target.ring_slot() != p.ring_slot() {
-                    n.pending = None;
-                    fx.push(CancelIntent);
-                }
+            if let Some(p) = n.pending
+                && target.ring_slot() != p.ring_slot()
+            {
+                n.pending = None;
+                fx.push(CancelIntent);
             }
 
             match target {

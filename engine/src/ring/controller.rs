@@ -547,11 +547,11 @@ impl Controller {
             self.hold_at = None;
             self.dispatch(Event::HoldElapsed, now);
         }
-        if let Some((slot, at)) = self.intent {
-            if at <= now {
-                self.intent = None;
-                self.dispatch(Event::IntentElapsed { slot }, now);
-            }
+        if let Some((slot, at)) = self.intent
+            && at <= now
+        {
+            self.intent = None;
+            self.dispatch(Event::IntentElapsed { slot }, now);
         }
     }
 
@@ -686,12 +686,13 @@ impl Controller {
     }
 
     fn apply_settings(&mut self) {
-        if self.state.phase == Phase::Idle && self.open.is_none() {
-            if let Some(settings) = self.next_settings.take() {
-                self.settings = settings;
-                if let Some(overlay) = self.overlay.as_mut() {
-                    warm_up(overlay, &self.settings);
-                }
+        if self.state.phase == Phase::Idle
+            && self.open.is_none()
+            && let Some(settings) = self.next_settings.take()
+        {
+            self.settings = settings;
+            if let Some(overlay) = self.overlay.as_mut() {
+                warm_up(overlay, &self.settings);
             }
         }
     }

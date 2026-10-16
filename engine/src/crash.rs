@@ -244,7 +244,7 @@ fn thread_name(buffer: &mut NameBuffer) -> &[u16] {
     let len = usize::from(header.Length) / 2;
     // The text follows the header in the same buffer; the checks keep it so.
     let offset = (header.Buffer.0 as usize).wrapping_sub(base as usize);
-    if len == 0 || offset % 2 != 0 || offset.saturating_add(len * 2) > size {
+    if len == 0 || !offset.is_multiple_of(2) || offset.saturating_add(len * 2) > size {
         return &[];
     }
     // SAFETY: the text is inside `buffer`, aligned, and Windows wrote it.

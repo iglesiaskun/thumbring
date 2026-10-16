@@ -412,16 +412,16 @@ impl RingView {
                     on: dv > 0.45,
                 };
                 // While the blob travels, it carries the hero icon.
-                if let Some(b) = ff.blob.filter(|_| index == ff.hero && appear == 0.0) {
-                    if ff.hero_on_blob > 0.0 {
-                        icon = IconDraw {
-                            key: icon.key,
-                            center: place(b.center),
-                            scale: frame.size * (b.r / geometry.r),
-                            opacity: frame.alpha * ff.hero_on_blob,
-                            on: true,
-                        };
-                    }
+                if let Some(b) = ff.blob.filter(|_| index == ff.hero && appear == 0.0)
+                    && ff.hero_on_blob > 0.0
+                {
+                    icon = IconDraw {
+                        key: icon.key,
+                        center: place(b.center),
+                        scale: frame.size * (b.r / geometry.r),
+                        opacity: frame.alpha * ff.hero_on_blob,
+                        on: true,
+                    };
                 }
                 match icons.iter_mut().find(|i| i.key == icon.key) {
                     Some(existing) if appear > 0.0 || icon.on => *existing = icon,

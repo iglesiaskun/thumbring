@@ -244,10 +244,10 @@ fn main() -> ExitCode {
             }
             // Asked for another file (another --dir): this window keeps its
             // own, and says so.
-            if let Some(asked) = asked_file(args, &cwd) {
-                if file_key(&asked) != file_key(&app.state::<State>().path) {
-                    let _ = app.emit("other-file", asked.display().to_string());
-                }
+            if let Some(asked) = asked_file(args, &cwd)
+                && file_key(&asked) != file_key(&app.state::<State>().path)
+            {
+                let _ = app.emit("other-file", asked.display().to_string());
             }
         }))
         .plugin(tauri_plugin_dialog::init())

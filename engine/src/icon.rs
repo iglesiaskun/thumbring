@@ -80,7 +80,7 @@ pub fn create(size: i32, look: Look, light_taskbar: bool) -> windows::core::Resu
 
 /// The bitmap wants blue first.
 fn bgra(mut rgba: Vec<u8>) -> Vec<u8> {
-    for px in rgba.chunks_exact_mut(4) {
+    for px in rgba.as_chunks_mut::<4>().0 {
         px.swap(0, 2);
     }
     rgba

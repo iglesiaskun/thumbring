@@ -401,12 +401,12 @@ fn reinstall_now(hooks: &mut Hooks) {
             Err(e) => send(HookEvent::InstallFailed(e.code().0)),
         }
     }
-    if let Some(old) = hooks.keyboard {
-        if let Ok(new) = set_hook(WH_KEYBOARD_LL) {
-            // SAFETY: as above.
-            let _ = unsafe { UnhookWindowsHookEx(old) };
-            hooks.keyboard = Some(new);
-        }
+    if let Some(old) = hooks.keyboard
+        && let Ok(new) = set_hook(WH_KEYBOARD_LL)
+    {
+        // SAFETY: as above.
+        let _ = unsafe { UnhookWindowsHookEx(old) };
+        hooks.keyboard = Some(new);
     }
 }
 

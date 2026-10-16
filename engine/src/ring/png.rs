@@ -63,7 +63,7 @@ fn stored(raw: &[u8]) -> Vec<u8> {
 /// Converts premultiplied BGRA (as Direct3D gives it) to straight RGBA.
 pub fn bgra_premultiplied_to_rgba(bgra: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(bgra.len());
-    for px in bgra.chunks_exact(4) {
+    for px in bgra.as_chunks::<4>().0 {
         let a = px[3];
         let straight = |c: u8| {
             if a == 0 {
