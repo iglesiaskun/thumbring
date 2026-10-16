@@ -15,6 +15,8 @@ A lightweight Windows tool that gives any mouse **gestures** and a radial
   back or forward).
 - **Other buttons** can take either job: Back, Forward or the middle button
   (pressing the wheel).
+- **A settings window** changes all of it, with a live preview of the ring:
+  right-click the tray icon > **Open settings**.
 
 <!--
   GIF: the ring. Save it as docs/media/ring.gif and replace this comment with
@@ -27,16 +29,24 @@ A lightweight Windows tool that gives any mouse **gestures** and a radial
   ![Holding Back and dragging runs a gesture](docs/media/gestures.gif)
 -->
 
-Thumbring 0.1.0 is the first public release, configured through a settings
-file. The next version adds a settings window (tray menu > Open settings),
-and the file keeps working as before. What changed in each version is in the
-[changelog](CHANGELOG.md).
+Thumbring 0.1.0 is the first public release. What changed in each version is
+in the [changelog](CHANGELOG.md).
 
 ## Install
 
-Thumbring runs on Windows 10 and 11 (64-bit). By default it uses the two side
-buttons of the mouse, Back and Forward; on a mouse without them, the middle
-button can run the gestures or open the ring instead (see "Configuration").
+Requirements:
+
+- Windows 10 or 11, 64-bit.
+- A mouse with the two side buttons, Back and Forward. On a mouse without
+  them, the middle button can run the gestures or open the ring instead.
+- For the settings window, the WebView2 Runtime, the part of Windows that
+  shows web pages inside apps. Windows 11 comes with it, and Windows Update
+  has already installed it on most Windows 10 computers. Where it is missing,
+  **Open settings** shows a message with the link to download it, for free;
+  everything else in Thumbring works without it, and the settings file can
+  still be edited by hand (tray menu > **Open settings file**).
+
+To install:
 
 1. Download the latest version from the
    [Releases page](https://github.com/iglesiaskun/thumbring/releases/latest):
@@ -55,6 +65,8 @@ button can run the gestures or open the ring instead (see "Configuration").
    **Start with Windows**. To use it in windows that run as administrator
    too, check **Start with Windows as administrator** instead; "Known
    limitations" below explains it.
+5. To change the gestures, the ring or the buttons, right-click the icon and
+   choose **Open settings**.
 
 **Uninstall.** With the `.msi`, remove Thumbring in Settings > Apps >
 Installed apps; that also stops it from starting with Windows. With the
@@ -98,12 +110,38 @@ closes the ring.
 | Apps (folder) | Calculator, Notepad, Terminal, Settings |
 
 Click the tray icon to pause or resume Thumbring. Right-click it for the menu:
-pause, open the settings file, open the log, start with Windows (normally or
-as administrator) and quit.
+pause, open the settings window, open the settings file, open the log, start
+with Windows (normally or as administrator) and quit.
+
+### Settings window
+
+Right-click the tray icon > **Open settings**. The window has a page for each
+part of Thumbring:
+
+| Page | What it changes |
+|---|---|
+| Ring | the 8 slots, on a live preview: drag actions onto the slots, open folders, pick an icon or use an SVG or PNG of your own, record a shortcut |
+| Gestures | the command of each direction and how far to drag, with a pad to try them |
+| Apps | where Thumbring stays off (fullscreen, excluded apps) and per-app gesture profiles |
+| Behavior | which mouse buttons run the gestures and open the ring, and how the ring opens |
+| Appearance | colors, transparency, size and distance of the items, shadow and label; **Show on my screen** shows the ring for real before you save |
+| Animation | the style and speed of the animation, with a slow-motion demo |
+
+<!--
+  GIF: the settings window. Save it as docs/media/settings.gif and replace
+  this comment with
+  ![The settings window, with the ring on a live preview](docs/media/settings.gif)
+-->
+
+Nothing changes until you click **Save** (`Ctrl+S`); `Ctrl+Z` and `Ctrl+Y`
+undo and redo. Thumbring uses the saved settings at once, and the window says
+so. The window writes the same settings file described below and keeps its
+comments, so you can use either one.
 
 ## Configuration
 
-The settings file is `%APPDATA%\thumbring\config.toml`. Thumbring creates
+Everything here can be changed in the settings window. The settings file
+behind it is `%APPDATA%\thumbring\config.toml`. Thumbring creates
 it on the first run with every default and a comment for each option (the
 template is [`core/src/config/default.toml`](core/src/config/default.toml)),
 and reloads it every time it is saved. An invalid or out-of-range value falls
@@ -274,8 +312,9 @@ fullscreen. Before playing online, pause Thumbring from the tray or add the
 game's `.exe` to `excluded` under `[apps]` in the settings file.
 
 **Warnings from SmartScreen and antivirus programs.** The release files are
-not code-signed yet: a certificate is expensive for a free project, and free
-signing for open source projects has been requested. Until then, Windows
+not code-signed yet: a certificate is expensive for a free project, and the
+plan is to apply for free signing for open source projects now that the first
+version is out. Until then, Windows
 SmartScreen warns about a new program with no reputation ("Windows protected
 your PC"), and an antivirus may distrust an unknown program that hooks the
 mouse and simulates key presses, which is exactly what Thumbring does. To make
@@ -292,6 +331,14 @@ You can also build Thumbring from the source code yourself (see below).
 something else, Thumbring no longer sees them as Back and Forward. Set them
 back to Back and Forward (or "default") in that software.
 
+**Settings window without WebView2.** On a computer without the WebView2
+Runtime (see "Install"), the settings window does not open; it says where to
+get the runtime instead. Gestures, the ring and the settings file work as
+usual.
+
+**Windows only, in English.** Thumbring runs only on Windows for now, and its
+menus, messages and settings window are in English.
+
 ## FAQ
 
 **Does Thumbring collect data or use the internet?**
@@ -300,9 +347,11 @@ the names of the apps you focus, which helps when writing profiles.
 
 **Does it work with my mouse?**
 Yes. By default Thumbring uses the two side buttons, Back and Forward
-(sometimes called buttons 4 and 5). On a mouse without them, write
-`button = "middle"` under `[gestures]` or under `[ring]` in the settings file,
-and pressing the wheel runs the gestures or opens the ring.
+(sometimes called buttons 4 and 5). On a mouse without them, choose the
+middle button for the gestures or the ring in the settings window (Behavior >
+Mouse buttons), or write `button = "middle"` under `[gestures]` or under
+`[ring]` in the settings file, and pressing the wheel runs the gestures or
+opens the ring.
 
 **How do I change the gestures or the ring?**
 Right-click the tray icon > Open settings, change what you want and save.
@@ -310,13 +359,12 @@ Thumbring uses the new settings at once. You can also edit the file itself:
 tray menu > Open settings file; the "Configuration" section above explains
 the options.
 
-**Is there a settings window?**
-Yes, from the next version: tray menu > Open settings. It shows your ring with
-a live preview, the gestures, the apps and their profiles, the behavior, the
-appearance and the animation. It is a separate program, `thumbring-settings.exe`, next to
-`thumbring.exe`, and needs the WebView2 Runtime, which comes with Windows 11
-and with the updates of Windows 10. It saves to the same settings file and
-keeps its comments.
+**Open settings opens the settings file, or says WebView2 is missing. Why?**
+The settings window is a separate program, `thumbring-settings.exe`, which
+must sit next to `thumbring.exe` (the `.msi` and the `.zip` put it there), and
+it needs the WebView2 Runtime. Without the program, Thumbring opens the
+settings file instead and says so; without the runtime, the window shows the
+link to download it. Gestures and the ring keep working either way.
 
 **How do I go back to the default settings?**
 Quit Thumbring, delete `%APPDATA%\thumbring\config.toml` and start Thumbring
@@ -357,10 +405,10 @@ Development build, with the log in a console (`Ctrl+C` quits):
 cargo run -p thumbring
 ```
 
-Release build, which runs without a console:
+Release build of both programs, which run without a console:
 
 ```bash
-cargo build --release -p thumbring
+cargo build --release -p thumbring -p thumbring-settings
 ```
 
 Then start `target\release\thumbring.exe`. `--dir <folder>` keeps the

@@ -13,6 +13,8 @@ ações** radial:
   sempre fez (voltar ou avançar a página).
 - **Outros botões** podem fazer qualquer uma das duas funções: voltar, avançar
   ou o botão do meio (apertar a roda).
+- **Uma janela de configurações** muda tudo isso, com uma prévia ao vivo do
+  anel: botão direito no ícone da bandeja > **Open settings**.
 
 <!--
   GIF: o anel. Salve como docs/media/ring.gif e troque este comentário por
@@ -25,16 +27,25 @@ ações** radial:
   ![Segurar o voltar e arrastar dispara um gesto](docs/media/gestures.gif)
 -->
 
-O Thumbring 0.1.0 é a primeira versão pública, configurada por um arquivo. A
-próxima versão traz uma janela de configurações (menu da bandeja > Open
-settings), e o arquivo continua funcionando como antes. O que mudou em cada
-versão está no [changelog](CHANGELOG.md) (em inglês).
+O Thumbring 0.1.0 é a primeira versão pública. O que mudou em cada versão está
+no [changelog](CHANGELOG.md) (em inglês).
 
 ## Instalação
 
-O Thumbring roda no Windows 10 e 11 (64 bits). Por padrão, ele usa os dois
-botões laterais do mouse, voltar e avançar; num mouse sem eles, o botão do meio
-pode fazer os gestos ou abrir o anel (veja "Configuração").
+Requisitos:
+
+- Windows 10 ou 11, 64 bits.
+- Um mouse com os dois botões laterais, voltar e avançar. Num mouse sem eles,
+  o botão do meio pode fazer os gestos ou abrir o anel.
+- Para a janela de configurações, o WebView2 Runtime, a parte do Windows que
+  mostra páginas web dentro dos apps. Ele já vem com o Windows 11, e o Windows
+  Update já o instalou na maioria dos computadores com Windows 10. Onde ele
+  faltar, o **Open settings** mostra uma mensagem com o link para baixá-lo, de
+  graça; todo o resto do Thumbring funciona sem ele, e o arquivo de
+  configuração continua editável à mão (menu da bandeja > **Open settings
+  file**).
+
+Para instalar:
 
 1. Baixe a versão mais recente na
    [página de Releases](https://github.com/iglesiaskun/thumbring/releases/latest):
@@ -56,6 +67,8 @@ pode fazer os gestos ou abrir o anel (veja "Configuração").
    que rodam como administrador, marque **Start with Windows as
    administrator** no lugar; "Limitações conhecidas", abaixo, explica essa
    opção.
+5. Para mudar os gestos, o anel ou os botões, clique com o botão direito no
+   ícone e escolha **Open settings**.
 
 **Desinstalar.** Com o `.msi`, remova o Thumbring em Configurações >
 Aplicativos > Aplicativos instalados; isso também faz ele parar de abrir com o
@@ -102,12 +115,39 @@ Os nomes do anel padrão ficam em inglês, como o resto do arquivo de
 configuração; dá para trocar qualquer um.
 
 Clique no ícone da bandeja para pausar ou retomar o Thumbring. Com o botão
-direito, abre o menu: pausar, abrir o arquivo de configuração, abrir o log,
-iniciar com o Windows (normalmente ou como administrador) e sair.
+direito, abre o menu: pausar, abrir a janela de configurações, abrir o arquivo
+de configuração, abrir o log, iniciar com o Windows (normalmente ou como
+administrador) e sair.
+
+### Janela de configurações
+
+Botão direito no ícone da bandeja > **Open settings**. A janela tem uma página
+para cada parte do Thumbring:
+
+| Página | O que muda |
+|---|---|
+| Ring | os 8 slots, numa prévia ao vivo: arrastar ações para os slots, abrir pastas, escolher um ícone ou usar um SVG ou PNG seu, gravar um atalho |
+| Gestures | o comando de cada direção e quanto arrastar, com um quadro para testar |
+| Apps | onde o Thumbring fica desligado (tela cheia, apps excluídos) e os perfis de gestos por app |
+| Behavior | quais botões do mouse fazem os gestos e abrem o anel, e como o anel abre |
+| Appearance | cores, transparência, tamanho e distância dos itens, sombra e rótulo; **Show on my screen** mostra o anel de verdade antes de salvar |
+| Animation | o estilo e a velocidade da animação, com uma demonstração em câmera lenta |
+
+<!--
+  GIF: a janela de configurações. Salve como docs/media/settings.gif e troque
+  este comentário por
+  ![A janela de configurações, com o anel numa prévia ao vivo](docs/media/settings.gif)
+-->
+
+Nada muda até você clicar em **Save** (`Ctrl+S`); `Ctrl+Z` e `Ctrl+Y`
+desfazem e refazem. O Thumbring passa a usar o que foi salvo na hora, e a
+janela avisa. Ela grava no mesmo arquivo de configuração descrito abaixo e
+mantém os comentários dele, então dá para usar qualquer um dos dois.
 
 ## Configuração
 
-O arquivo fica em `%APPDATA%\thumbring\config.toml`. O Thumbring cria esse
+Tudo desta seção pode ser mudado na janela de configurações. O arquivo por
+trás dela fica em `%APPDATA%\thumbring\config.toml`. O Thumbring cria esse
 arquivo na primeira execução, com todos os padrões e um comentário por opção (o
 modelo é [`core/src/config/default.toml`](core/src/config/default.toml), em
 inglês), e relê sempre que ele é salvo. Valor inválido ou fora da faixa volta
@@ -282,8 +322,9 @@ bandeja ou coloque o `.exe` do jogo em `excluded`, na seção `[apps]` do arquiv
 de configuração.
 
 **Avisos do SmartScreen e de antivírus.** Os arquivos das versões ainda não
-têm assinatura digital: o certificado é caro para um projeto gratuito, e a
-assinatura gratuita para projetos open source já foi pedida. Até lá, o
+têm assinatura digital: o certificado é caro para um projeto gratuito, e o
+plano é pedir a assinatura gratuita para projetos open source agora que a
+primeira versão saiu. Até lá, o
 SmartScreen do Windows avisa sobre um programa novo e sem reputação ("O
 Windows protegeu o computador"), e um antivírus pode desconfiar de um programa
 desconhecido que monitora o mouse e simula teclas, que é exatamente o que o
@@ -301,6 +342,14 @@ Você também pode compilar o Thumbring a partir do código (veja abaixo).
 laterais, o Thumbring deixa de enxergá-los como voltar e avançar. Volte os
 dois para voltar e avançar (ou "padrão") nesse software.
 
+**Janela de configurações sem o WebView2.** Num computador sem o WebView2
+Runtime (veja "Instalação"), a janela de configurações não abre; no lugar dela
+aparece uma mensagem dizendo onde baixá-lo. Os gestos, o anel e o arquivo de
+configuração funcionam normalmente.
+
+**Só Windows, em inglês.** Por enquanto o Thumbring roda só no Windows, e os
+menus, as mensagens e a janela de configurações estão em inglês.
+
 ## Perguntas frequentes
 
 **O Thumbring coleta dados ou usa a internet?**
@@ -309,9 +358,10 @@ lista os nomes dos apps que ganham o foco, o que ajuda a escrever perfis.
 
 **Funciona com o meu mouse?**
 Sim. Por padrão, o Thumbring usa os dois botões laterais, voltar e avançar (às
-vezes chamados de botões 4 e 5). Num mouse sem eles, escreva
-`button = "middle"` em `[gestures]` ou em `[ring]` no arquivo de configuração,
-e apertar a roda faz os gestos ou abre o anel.
+vezes chamados de botões 4 e 5). Num mouse sem eles, escolha o botão do meio
+para os gestos ou para o anel na janela de configurações (Behavior > Mouse
+buttons), ou escreva `button = "middle"` em `[gestures]` ou em `[ring]` no
+arquivo de configuração, e apertar a roda faz os gestos ou abre o anel.
 
 **Como mudo os gestos ou o anel?**
 Botão direito no ícone da bandeja > Open settings, mude o que quiser e salve.
@@ -319,13 +369,12 @@ O Thumbring passa a usar a configuração nova na hora. Também dá para editar 
 próprio arquivo: menu da bandeja > Open settings file; a seção "Configuração",
 acima, explica as opções.
 
-**Tem uma janela de configurações?**
-Tem, a partir da próxima versão: menu da bandeja > Open settings. Ela mostra o
-seu anel com uma prévia ao vivo, os gestos, os apps e os perfis deles, o
-comportamento, a aparência e a animação. É um programa à parte, o
-`thumbring-settings.exe`, ao lado do `thumbring.exe`, e precisa do WebView2
-Runtime, que vem com o Windows 11 e com as atualizações do Windows 10. Ela
-grava no mesmo arquivo de configuração e mantém os comentários dele.
+**O Open settings abre o arquivo de configuração, ou diz que falta o WebView2. Por quê?**
+A janela de configurações é um programa à parte, o `thumbring-settings.exe`,
+que precisa estar ao lado do `thumbring.exe` (o `.msi` e o `.zip` já o colocam
+lá), e precisa do WebView2 Runtime. Sem o programa, o Thumbring abre o arquivo
+de configuração no lugar e avisa; sem o runtime, a janela mostra o link para
+baixá-lo. Os gestos e o anel continuam funcionando nos dois casos.
 
 **Como volto para a configuração padrão?**
 Feche o Thumbring, apague `%APPDATA%\thumbring\config.toml` e abra o Thumbring
@@ -368,10 +417,10 @@ Versão de desenvolvimento, com o log num console (`Ctrl+C` encerra):
 cargo run -p thumbring
 ```
 
-Versão de release, que roda sem console:
+Versão de release dos dois programas, que rodam sem console:
 
 ```bash
-cargo build --release -p thumbring
+cargo build --release -p thumbring -p thumbring-settings
 ```
 
 Depois abra `target\release\thumbring.exe`. `--dir <pasta>` guarda o arquivo
