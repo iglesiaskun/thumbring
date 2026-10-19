@@ -1,36 +1,120 @@
 # Thumbring
 
+**Gestos de mouse e um anel de ações radial para Windows, em qualquer mouse.**
+
+[![CI](https://github.com/iglesiaskun/thumbring/actions/workflows/ci.yml/badge.svg)](https://github.com/iglesiaskun/thumbring/actions/workflows/ci.yml)
+[![Versão mais recente](https://img.shields.io/github/v/release/iglesiaskun/thumbring)](https://github.com/iglesiaskun/thumbring/releases/latest)
+[![Licença: MIT ou Apache-2.0](https://img.shields.io/badge/license-MIT%20or%20Apache--2.0-blue)](#licença)
+
 [Read in English](README.md)
 
-Ferramenta leve para Windows que dá a qualquer mouse **gestos** e um **anel de
-ações** radial:
+![Segurar o botão avançar abre um anel de oito botões redondos ao redor do cursor. Parar na pasta Apps a abre com uma gota que escorre até as ações dela, e um clique em Calculator fecha o anel e abre a Calculadora.](docs/media/ring.gif)
 
-- **Segurar o botão voltar e arrastar** dispara um gesto (cima, baixo, esquerda
-  ou direita).
-- **Segurar o botão avançar** abre um anel com 8 slots ao redor do cursor. Cada
-  slot é uma ação ou uma pasta com até 9 ações.
-- **Um toque rápido** em qualquer um dos dois continua fazendo o que o botão
-  sempre fez (voltar ou avançar a página).
-- **Outros botões** podem fazer qualquer uma das duas funções: voltar, avançar
-  ou o botão do meio (apertar a roda).
-- **Uma janela de configurações** muda tudo isso, com uma prévia ao vivo do
-  anel: botão direito no ícone da bandeja > **Open settings**.
+Segure o **avançar** e um anel de ações abre ao redor do cursor. Segure o
+**voltar** e arraste para fazer um gesto. Um toque rápido em qualquer um dos
+dois continua voltando ou avançando a página, como sempre.
 
-<!--
-  GIF: o anel. Salve como docs/media/ring.gif e troque este comentário por
-  ![Segurar o avançar abre o anel de ações](docs/media/ring.gif)
--->
+## Por que usar
 
-<!--
-  GIF: os gestos. Salve como docs/media/gestures.gif e troque este comentário
-  por
-  ![Segurar o voltar e arrastar dispara um gesto](docs/media/gestures.gif)
--->
+É leve: um programa pequeno que fica dormindo até você segurar um botão do
+mouse. Funciona com qualquer mouse que tenha os botões laterais, ou com o
+botão do meio. Não pede conta, não coleta nada, não faz nenhuma conexão de
+rede, e é gratuito e de código aberto.
+
+## Recursos
+
+### Gestos no botão voltar
+
+![Segurar o voltar e arrastar para a direita desliza a tela para a área de trabalho virtual anterior, arrastar para a esquerda volta, e arrastar para cima abre a visão de tarefas.](docs/media/gestures.gif)
+
+Segure o botão voltar do mouse, arraste uns 3 cm e solte:
+
+| Gesto | Padrão |
+|---|---|
+| Cima | `Win+Tab` (visão de tarefas) |
+| Baixo | `Win+D` (mostrar a área de trabalho) |
+| Esquerda | `Ctrl+Win+Right` (próxima área de trabalho virtual) |
+| Direita | `Ctrl+Win+Left` (área de trabalho virtual anterior) |
+| Toque rápido | voltar, como sempre |
+
+Um gesto, assim como uma ação do anel, pode apertar um atalho de teclado ou
+uma tecla de mídia, abrir um app, um arquivo, uma pasta ou uma URL, ou fazer
+uma ação pronta (captura de tela, painel de emojis, Explorador de Arquivos,
+bloquear a tela).
+
+### Um anel de ações com pastas
+
+Segure o botão avançar por um instante: o anel abre ao redor do cursor. Ele
+tem 8 slots, e cada um tem uma ação ou uma pasta com até 9 ações. Aponte para
+um item e clique, ou solte o avançar e clique depois: o anel continua aberto
+onde quer que você solte, até no centro. Uma pasta abre quando o cursor para
+nela. Clique no × do centro, clique fora do anel, botão direito, Esc, avançar
+de novo ou trocar de janela fecham o anel sem fazer nada. Com o anel aberto,
+cliques e a roda do mouse nunca chegam à janela de baixo. No modo rápido
+(`execute_on_release = true` em `[behavior]`), soltar sobre uma ação executa e
+soltar no centro fecha o anel.
+
+| Anel padrão (sentido horário, a partir do topo) | Faz |
+|---|---|
+| Play or pause | `PlayPause` |
+| Screenshot | captura de tela com recorte |
+| Media (pasta) | faixa anterior e próxima, volume, mudo |
+| Lock screen | bloqueia a sessão |
+| Editing (pasta) | copiar, colar, recortar, desfazer, refazer, histórico da área de transferência |
+| Emoji | painel de emojis |
+| File Explorer | abre o Explorador de Arquivos |
+| Apps (pasta) | Calculadora, Bloco de Notas, Terminal, Configurações |
+
+Os nomes do anel padrão ficam em inglês, como o resto do arquivo de
+configuração; dá para trocar qualquer um.
+
+### Uma janela de configurações com prévia ao vivo
+
+![A página Ring da janela de configurações: a pasta Apps está aberta na prévia ao vivo do anel, e o painel ao lado lista as quatro ações da pasta.](docs/media/settings-ring.png)
+
+Botão direito no ícone da bandeja > **Open settings**. A janela tem uma página
+para cada parte do Thumbring:
+
+| Página | O que muda |
+|---|---|
+| Ring | os 8 slots, numa prévia ao vivo: arrastar ações para os slots, abrir pastas, escolher um ícone ou usar um SVG ou PNG seu, gravar um atalho |
+| Gestures | o comando de cada direção e quanto arrastar, com um quadro para testar |
+| Apps | onde o Thumbring fica desligado (tela cheia, apps excluídos) e os perfis de gestos por app |
+| Behavior | quais botões do mouse fazem os gestos e abrem o anel, e como o anel abre |
+| Appearance | cores, transparência, tamanho e distância dos itens, sombra e rótulo; **Show on my screen** mostra o anel de verdade antes de salvar |
+| Animation | o estilo e a velocidade da animação, com uma demonstração em câmera lenta |
+
+Nada muda até você clicar em **Save** (`Ctrl+S`); `Ctrl+Z` e `Ctrl+Y`
+desfazem e refazem. O Thumbring passa a usar o que foi salvo na hora, e a
+janela avisa. Ela grava no arquivo de configuração descrito em
+["Referência do arquivo de configuração"](#referência-do-arquivo-de-configuração)
+e mantém os comentários dele, então dá para usar qualquer um dos dois.
+
+### Perfis para cada app
+
+Um perfil troca só os gestos que ele lista, nos apps que você escolher:
+esquerda e direita podem trocar de aba no navegador e de área de trabalho no
+resto. O Thumbring também se desliga nos apps que você excluir e quando um
+app está em tela cheia, e um clique no ícone da bandeja o pausa.
+
+### Suas cores e sua animação
+
+![A página Appearance da janela de configurações: uma prévia ao vivo do anel com uma pasta aberta, ao lado das predefinições Classic, Midnight, Glass e Accent e da cor de cada parte.](docs/media/settings-appearance.png)
+
+Escolha uma predefinição (Classic, Midnight, Glass ou Accent) ou ajuste cada
+cor, a transparência, o tamanho e a distância dos itens, a sombra e o rótulo.
+A animação tem dois estilos, viscoso e elástico, e a velocidade e os tempos
+dela são seus para mudar.
+
+### Qualquer botão para qualquer função
+
+Os gestos e o anel podem usar cada um o voltar, o avançar ou o botão do meio
+(apertar a roda), então um mouse sem botões laterais também serve.
+
+## Instalação
 
 O Thumbring 0.1.0 é a primeira versão pública. O que mudou em cada versão está
 no [changelog](CHANGELOG.md) (em inglês).
-
-## Instalação
 
 Requisitos:
 
@@ -54,10 +138,13 @@ Para instalar:
      menu Iniciar e já abre o programa. Para atualizar, rode o `.msi` mais novo.
    - **`thumbring-<versão>-windows-x64.zip`** roda sem instalar: descompacte
      onde quiser e abra o `thumbring.exe`.
-2. Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais
-   informações** e depois em **Executar assim mesmo**. Os arquivos ainda não
-   têm assinatura digital; "Limitações conhecidas", mais abaixo, explica por
-   quê e como conferir o download.
+2. O Windows provavelmente vai mostrar "O Windows protegeu o computador": os
+   arquivos ainda não têm assinatura digital, e o SmartScreen avisa sobre
+   programas novos que ainda não têm reputação. Clique em **Mais
+   informações** e depois em **Executar assim mesmo**.
+   ["Limitações conhecidas"](#limitações-conhecidas) explica por quê e como
+   conferir se o download é o mesmo que o GitHub compilou a partir deste
+   repositório.
 3. Na primeira execução, uma notificação avisa que o Thumbring está rodando. O
    ícone fica na área de notificação, perto do relógio; o Windows pode
    escondê-lo atrás da setinha **^**. Para deixá-lo sempre à vista, arraste-o
@@ -65,10 +152,8 @@ Para instalar:
 4. Para o Thumbring abrir junto com o Windows, clique com o botão direito no
    ícone e marque **Start with Windows**. Para ele funcionar também em janelas
    que rodam como administrador, marque **Start with Windows as
-   administrator** no lugar; "Limitações conhecidas", abaixo, explica essa
-   opção.
-5. Para mudar os gestos, o anel ou os botões, clique com o botão direito no
-   ícone e escolha **Open settings**.
+   administrator** no lugar; ["Limitações conhecidas"](#limitações-conhecidas)
+   explica essa opção.
 
 **Desinstalar.** Com o `.msi`, remova o Thumbring em Configurações >
 Aplicativos > Aplicativos instalados; isso também faz ele parar de abrir com o
@@ -78,73 +163,176 @@ administrator**); depois feche o programa e apague a pasta dele. A
 configuração e o log continuam em `%APPDATA%\thumbring` e
 `%LOCALAPPDATA%\thumbring`; apague essas pastas para remover tudo.
 
-## Como usar
+## Primeiros passos
 
-Segure o botão voltar do mouse, arraste uns 3 cm e solte (os botões podem ser
-trocados; veja "Configuração"):
-
-| Gesto | Padrão |
-|---|---|
-| Cima | `Win+Tab` (visão de tarefas) |
-| Baixo | `Win+D` (mostrar a área de trabalho) |
-| Esquerda | `Ctrl+Win+Right` (próxima área de trabalho virtual) |
-| Direita | `Ctrl+Win+Left` (área de trabalho virtual anterior) |
-| Toque rápido | voltar, como sempre |
-
-Segure o botão avançar por um instante: o anel abre ao redor do cursor.
-Aponte para um item e clique, ou solte o avançar e clique depois: o anel
-continua aberto onde quer que você solte, até no centro. Uma pasta abre quando
-o cursor para nela. Clique no × do centro, clique fora do anel, botão direito,
-Esc, avançar de novo ou trocar de janela fecham o anel sem fazer nada. Com o
-anel aberto, cliques e a roda do mouse nunca chegam à janela de baixo. No modo
-rápido (`execute_on_release = true` em `[behavior]`), soltar sobre uma ação
-executa e soltar no centro fecha o anel.
-
-| Anel padrão (sentido horário, a partir do topo) | Faz |
-|---|---|
-| Play or pause | `PlayPause` |
-| Screenshot | captura de tela com recorte |
-| Media (pasta) | faixa anterior e próxima, volume, mudo |
-| Lock screen | bloqueia a sessão |
-| Editing (pasta) | copiar, colar, recortar, desfazer, refazer, histórico da área de transferência |
-| Emoji | painel de emojis |
-| File Explorer | abre o Explorador de Arquivos |
-| Apps (pasta) | Calculadora, Bloco de Notas, Terminal, Configurações |
-
-Os nomes do anel padrão ficam em inglês, como o resto do arquivo de
-configuração; dá para trocar qualquer um.
+1. **Segure o avançar** para abrir o anel, aponte para uma ação e clique.
+2. **Segure o voltar e arraste** para cima, para baixo, para a esquerda ou
+   para a direita para fazer um gesto.
+3. **Botão direito no ícone da bandeja > Open settings** para mudar o anel,
+   os gestos e os botões.
 
 Clique no ícone da bandeja para pausar ou retomar o Thumbring. Com o botão
 direito, abre o menu: pausar, abrir a janela de configurações, abrir o arquivo
 de configuração, abrir o log, iniciar com o Windows (normalmente ou como
 administrador) e sair.
 
-### Janela de configurações
+## Limitações conhecidas
 
-Botão direito no ícone da bandeja > **Open settings**. A janela tem uma página
-para cada parte do Thumbring:
+**Janelas que rodam como administrador.** O Windows não deixa um programa sem
+permissão de administrador observar ou enviar teclas e cliques para janelas
+que rodam como administrador, como o Gerenciador de Tarefas, um terminal de
+administrador ou alguns instaladores. Enquanto uma delas está na frente, os
+gestos e o anel não funcionam ali, a não ser que o Thumbring também tenha
+permissão de administrador:
 
-| Página | O que muda |
-|---|---|
-| Ring | os 8 slots, numa prévia ao vivo: arrastar ações para os slots, abrir pastas, escolher um ícone ou usar um SVG ou PNG seu, gravar um atalho |
-| Gestures | o comando de cada direção e quanto arrastar, com um quadro para testar |
-| Apps | onde o Thumbring fica desligado (tela cheia, apps excluídos) e os perfis de gestos por app |
-| Behavior | quais botões do mouse fazem os gestos e abrem o anel, e como o anel abre |
-| Appearance | cores, transparência, tamanho e distância dos itens, sombra e rótulo; **Show on my screen** mostra o anel de verdade antes de salvar |
-| Animation | o estilo e a velocidade da animação, com uma demonstração em câmera lenta |
+1. Clique com o botão direito no ícone da bandeja e marque **Start with
+   Windows as administrator**. O Windows pede permissão uma vez (a janela do
+   UAC) e cria uma tarefa, "Thumbring (seu nome de usuário)", no Agendador de
+   Tarefas.
+2. A partir do próximo login, essa tarefa abre o Thumbring como
+   administrador, sem perguntar nada.
 
-<!--
-  GIF: a janela de configurações. Salve como docs/media/settings.gif e troque
-  este comentário por
-  ![A janela de configurações, com o anel numa prévia ao vivo](docs/media/settings.gif)
--->
+Os apps que o Thumbring abre (comandos `open:`, o arquivo de configuração, o
+log) continuam rodando sem permissão de administrador: quem abre é o
+Explorador de Arquivos, e se ele não responder, o Thumbring não abre nada e
+avisa. Desmarcar a opção, ou marcar **Start with Windows**,
+apaga a tarefa. Depois de uma atualização, o instalador abre o Thumbring sem
+permissão de administrador até o próximo login.
 
-Nada muda até você clicar em **Save** (`Ctrl+S`); `Ctrl+Z` e `Ctrl+Y`
-desfazem e refazem. O Thumbring passa a usar o que foi salvo na hora, e a
-janela avisa. Ela grava no mesmo arquivo de configuração descrito abaixo e
-mantém os comentários dele, então dá para usar qualquer um dos dois.
+Pense antes de ligar. Um programa que abre como administrador é tão seguro
+quanto a pasta dele, e o `.msi` instala o Thumbring na sua pasta de usuário,
+onde qualquer programa que você roda pode gravar. Um programa malicioso
+poderia trocar o `thumbring.exe` ali e ganhar permissão de administrador no
+seu próximo login, sem a janela do UAC. Se isso preocupa você, deixe a opção
+desligada, ou descompacte o `.zip` numa pasta que só administradores podem
+alterar, como `C:\Program Files\Thumbring`, e ligue a opção pelo Thumbring
+dessa pasta. Pelo mesmo motivo, enquanto tem permissão de administrador, o
+Thumbring ignora os botões do mouse que outros programas simulam, como
+ferramentas de acesso remoto ou programas que remapeiam os botões do mouse:
+só os botões de verdade fazem gestos e abrem o anel.
 
-## Configuração
+**Jogos e anti-cheat.** O Thumbring usa os mesmos recursos do Windows que
+ferramentas de macro: um hook de mouse de baixo nível e teclas simuladas.
+Alguns sistemas anti-cheat bloqueiam ou marcam programas assim. O Thumbring se
+desliga quando um app está em tela cheia, mas um jogo em janela sem borda pode
+não contar como tela cheia. Antes de jogar online, pause o Thumbring pela
+bandeja ou coloque o `.exe` do jogo em `excluded`, na seção `[apps]` do arquivo
+de configuração.
+
+**Avisos do SmartScreen e de antivírus.** Os arquivos das versões ainda não
+têm assinatura digital: o certificado é caro para um projeto gratuito, e o
+plano é pedir a assinatura gratuita para projetos open source agora que a
+primeira versão saiu. Até lá, o
+SmartScreen do Windows avisa sobre um programa novo e sem reputação ("O
+Windows protegeu o computador"), e um antivírus pode desconfiar de um programa
+desconhecido que monitora o mouse e simula teclas, que é exatamente o que o
+Thumbring faz. Para conferir se o download é o mesmo que o GitHub compilou a
+partir deste repositório:
+
+- compare a saída de `Get-FileHash <arquivo>` no PowerShell com a linha desse
+  arquivo no `SHA256SUMS` da mesma versão;
+- ou, com o [GitHub CLI](https://cli.github.com), rode
+  `gh attestation verify <arquivo> --repo iglesiaskun/thumbring`.
+
+Você também pode compilar o Thumbring a partir do código, como o
+[CONTRIBUTING.md](CONTRIBUTING.md#building-from-source) (em inglês) explica.
+
+**Software do mouse.** Se o software do seu mouse muda a função dos botões
+laterais, o Thumbring deixa de enxergá-los como voltar e avançar. Volte os
+dois para voltar e avançar (ou "padrão") nesse software.
+
+**Janela de configurações sem o WebView2.** Num computador sem o WebView2
+Runtime (veja "Instalação"), a janela de configurações não abre; no lugar dela
+aparece uma mensagem dizendo onde baixá-lo. Os gestos, o anel e o arquivo de
+configuração funcionam normalmente.
+
+**Só Windows, em inglês.** Por enquanto o Thumbring roda só no Windows, e os
+menus, as mensagens e a janela de configurações estão em inglês.
+
+## Perguntas frequentes
+
+**O Thumbring coleta dados ou usa a internet?**
+Não. Ele não faz nenhuma conexão de rede. O log fica no seu computador; ele
+lista os nomes dos apps que ganham o foco, o que ajuda a escrever perfis.
+
+**Funciona com o meu mouse?**
+Sim. Por padrão, o Thumbring usa os dois botões laterais, voltar e avançar (às
+vezes chamados de botões 4 e 5). Num mouse sem eles, escolha o botão do meio
+para os gestos ou para o anel na janela de configurações (Behavior > Mouse
+buttons), ou escreva `button = "middle"` em `[gestures]` ou em `[ring]` no
+arquivo de configuração, e apertar a roda faz os gestos ou abre o anel.
+
+**Como mudo os gestos ou o anel?**
+Botão direito no ícone da bandeja > Open settings, mude o que quiser e salve.
+O Thumbring passa a usar a configuração nova na hora. Também dá para editar o
+próprio arquivo: menu da bandeja > Open settings file; a
+["Referência do arquivo de configuração"](#referência-do-arquivo-de-configuração),
+mais abaixo, explica as opções.
+
+**O Open settings abre o arquivo de configuração, ou diz que falta o WebView2. Por quê?**
+A janela de configurações é um programa à parte, o `thumbring-settings.exe`,
+que precisa estar ao lado do `thumbring.exe` (o `.msi` e o `.zip` já o colocam
+lá), e precisa do WebView2 Runtime. Sem o programa, o Thumbring abre o arquivo
+de configuração no lugar e avisa; sem o runtime, a janela mostra o link para
+baixá-lo. Os gestos e o anel continuam funcionando nos dois casos.
+
+**Como volto para a configuração padrão?**
+Feche o Thumbring, apague `%APPDATA%\thumbring\config.toml` e abra o Thumbring
+de novo: ele cria um arquivo novo com os padrões.
+
+**Os gestos não funcionam no Gerenciador de Tarefas nem num terminal de administrador. Por quê?**
+Essas janelas rodam como administrador, e o Windows mantém os programas sem
+essa permissão longe delas. Marque **Start with Windows as administrator** no
+menu da bandeja e faça login de novo; "Limitações conhecidas", acima, explica
+o que você troca por isso.
+
+**Os gestos pararam de funcionar. E agora?**
+Olhe o ícone da bandeja: um anel apagado quer dizer que o Thumbring está
+pausado, desligado num app excluído ou desligado porque um app está em tela
+cheia; a dica do ícone diz qual. Lembre da limitação com janelas de
+administrador. Se nada disso explicar, o log (menu da bandeja > Open log)
+costuma explicar; por favor,
+[abra uma issue](https://github.com/iglesiaskun/thumbring/issues/new/choose) com as
+linhas do problema.
+
+**Por que "Thumbring"?**
+O polegar (*thumb*) aperta os botões laterais, e o anel (*ring*) abre ao
+redor do cursor.
+
+## Próximos passos
+
+Esta primeira versão é pequena de propósito, e o que as pessoas disserem dela
+vai guiar as próximas. Na lista, por enquanto:
+
+- Versões com assinatura digital, por um programa gratuito de assinatura
+  para projetos open source, para o SmartScreen parar de avisar.
+- macOS e Linux, um dia: a lógica em `core/` continua sem APIs do Windows
+  para isso.
+
+Ideias são bem-vindas como
+[pedidos de recurso](https://github.com/iglesiaskun/thumbring/issues/new/choose).
+
+## Como contribuir
+
+Relatos de bugs, ideias e pull requests são bem-vindos. O
+[CONTRIBUTING.md](CONTRIBUTING.md) (em inglês) explica como as mudanças
+entram e como compilar o Thumbring a partir do código.
+
+## Segurança
+
+Problemas de segurança devem ser relatados em particular, como o
+[SECURITY.md](SECURITY.md) explica.
+
+## Licença
+
+O Thumbring é distribuído sob a [licença MIT](LICENSE-MIT) ou a
+[Apache License, Version 2.0](LICENSE-APACHE), à sua escolha.
+
+Os ícones do anel e da janela de configurações vêm do
+[Lucide](https://lucide.dev) e estão sob a licença ISC
+([LICENSE-LUCIDE](engine/assets/icons/LICENSE-LUCIDE)).
+
+## Referência do arquivo de configuração
 
 Tudo desta seção pode ser mudado na janela de configurações. O arquivo por
 trás dela fica em `%APPDATA%\thumbring\config.toml`. O Thumbring cria esse
@@ -277,207 +465,3 @@ items = [
   { name = "Mudo", icon = "volume-x", command = "VolumeMute" },
 ]
 ```
-
-## Limitações conhecidas
-
-**Janelas que rodam como administrador.** O Windows não deixa um programa sem
-permissão de administrador observar ou enviar teclas e cliques para janelas
-que rodam como administrador, como o Gerenciador de Tarefas, um terminal de
-administrador ou alguns instaladores. Enquanto uma delas está na frente, os
-gestos e o anel não funcionam ali, a não ser que o Thumbring também tenha
-permissão de administrador:
-
-1. Clique com o botão direito no ícone da bandeja e marque **Start with
-   Windows as administrator**. O Windows pede permissão uma vez (a janela do
-   UAC) e cria uma tarefa, "Thumbring (seu nome de usuário)", no Agendador de
-   Tarefas.
-2. A partir do próximo login, essa tarefa abre o Thumbring como
-   administrador, sem perguntar nada.
-
-Os apps que o Thumbring abre (comandos `open:`, o arquivo de configuração, o
-log) continuam rodando sem permissão de administrador: quem abre é o
-Explorador de Arquivos, e se ele não responder, o Thumbring não abre nada e
-avisa. Desmarcar a opção, ou marcar **Start with Windows**,
-apaga a tarefa. Depois de uma atualização, o instalador abre o Thumbring sem
-permissão de administrador até o próximo login.
-
-Pense antes de ligar. Um programa que abre como administrador é tão seguro
-quanto a pasta dele, e o `.msi` instala o Thumbring na sua pasta de usuário,
-onde qualquer programa que você roda pode gravar. Um programa malicioso
-poderia trocar o `thumbring.exe` ali e ganhar permissão de administrador no
-seu próximo login, sem a janela do UAC. Se isso preocupa você, deixe a opção
-desligada, ou descompacte o `.zip` numa pasta que só administradores podem
-alterar, como `C:\Program Files\Thumbring`, e ligue a opção pelo Thumbring
-dessa pasta. Pelo mesmo motivo, enquanto tem permissão de administrador, o
-Thumbring ignora os botões do mouse que outros programas simulam, como
-ferramentas de acesso remoto ou programas que remapeiam os botões do mouse:
-só os botões de verdade fazem gestos e abrem o anel.
-
-**Jogos e anti-cheat.** O Thumbring usa os mesmos recursos do Windows que
-ferramentas de macro: um hook de mouse de baixo nível e teclas simuladas.
-Alguns sistemas anti-cheat bloqueiam ou marcam programas assim. O Thumbring se
-desliga quando um app está em tela cheia, mas um jogo em janela sem borda pode
-não contar como tela cheia. Antes de jogar online, pause o Thumbring pela
-bandeja ou coloque o `.exe` do jogo em `excluded`, na seção `[apps]` do arquivo
-de configuração.
-
-**Avisos do SmartScreen e de antivírus.** Os arquivos das versões ainda não
-têm assinatura digital: o certificado é caro para um projeto gratuito, e o
-plano é pedir a assinatura gratuita para projetos open source agora que a
-primeira versão saiu. Até lá, o
-SmartScreen do Windows avisa sobre um programa novo e sem reputação ("O
-Windows protegeu o computador"), e um antivírus pode desconfiar de um programa
-desconhecido que monitora o mouse e simula teclas, que é exatamente o que o
-Thumbring faz. Para conferir se o download é o mesmo que o GitHub compilou a
-partir deste repositório:
-
-- compare a saída de `Get-FileHash <arquivo>` no PowerShell com a linha desse
-  arquivo no `SHA256SUMS` da mesma versão;
-- ou, com o [GitHub CLI](https://cli.github.com), rode
-  `gh attestation verify <arquivo> --repo iglesiaskun/thumbring`.
-
-Você também pode compilar o Thumbring a partir do código (veja abaixo).
-
-**Software do mouse.** Se o software do seu mouse muda a função dos botões
-laterais, o Thumbring deixa de enxergá-los como voltar e avançar. Volte os
-dois para voltar e avançar (ou "padrão") nesse software.
-
-**Janela de configurações sem o WebView2.** Num computador sem o WebView2
-Runtime (veja "Instalação"), a janela de configurações não abre; no lugar dela
-aparece uma mensagem dizendo onde baixá-lo. Os gestos, o anel e o arquivo de
-configuração funcionam normalmente.
-
-**Só Windows, em inglês.** Por enquanto o Thumbring roda só no Windows, e os
-menus, as mensagens e a janela de configurações estão em inglês.
-
-## Perguntas frequentes
-
-**O Thumbring coleta dados ou usa a internet?**
-Não. Ele não faz nenhuma conexão de rede. O log fica no seu computador; ele
-lista os nomes dos apps que ganham o foco, o que ajuda a escrever perfis.
-
-**Funciona com o meu mouse?**
-Sim. Por padrão, o Thumbring usa os dois botões laterais, voltar e avançar (às
-vezes chamados de botões 4 e 5). Num mouse sem eles, escolha o botão do meio
-para os gestos ou para o anel na janela de configurações (Behavior > Mouse
-buttons), ou escreva `button = "middle"` em `[gestures]` ou em `[ring]` no
-arquivo de configuração, e apertar a roda faz os gestos ou abre o anel.
-
-**Como mudo os gestos ou o anel?**
-Botão direito no ícone da bandeja > Open settings, mude o que quiser e salve.
-O Thumbring passa a usar a configuração nova na hora. Também dá para editar o
-próprio arquivo: menu da bandeja > Open settings file; a seção "Configuração",
-acima, explica as opções.
-
-**O Open settings abre o arquivo de configuração, ou diz que falta o WebView2. Por quê?**
-A janela de configurações é um programa à parte, o `thumbring-settings.exe`,
-que precisa estar ao lado do `thumbring.exe` (o `.msi` e o `.zip` já o colocam
-lá), e precisa do WebView2 Runtime. Sem o programa, o Thumbring abre o arquivo
-de configuração no lugar e avisa; sem o runtime, a janela mostra o link para
-baixá-lo. Os gestos e o anel continuam funcionando nos dois casos.
-
-**Como volto para a configuração padrão?**
-Feche o Thumbring, apague `%APPDATA%\thumbring\config.toml` e abra o Thumbring
-de novo: ele cria um arquivo novo com os padrões.
-
-**Os gestos não funcionam no Gerenciador de Tarefas nem num terminal de administrador. Por quê?**
-Essas janelas rodam como administrador, e o Windows mantém os programas sem
-essa permissão longe delas. Marque **Start with Windows as administrator** no
-menu da bandeja e faça login de novo; "Limitações conhecidas", acima, explica
-o que você troca por isso.
-
-**Os gestos pararam de funcionar. E agora?**
-Olhe o ícone da bandeja: um anel apagado quer dizer que o Thumbring está
-pausado, desligado num app excluído ou desligado porque um app está em tela
-cheia; a dica do ícone diz qual. Lembre da limitação com janelas de
-administrador. Se nada disso explicar, o log (menu da bandeja > Open log)
-costuma explicar; por favor,
-[abra uma issue](https://github.com/iglesiaskun/thumbring/issues/new/choose) com as
-linhas do problema.
-
-**Por que "Thumbring"?**
-O polegar (*thumb*) aperta os botões laterais, e o anel (*ring*) abre ao
-redor do cursor.
-
-## Como compilar
-
-Pré-requisitos (só Windows):
-
-- Rust estável com o alvo `x86_64-pc-windows-msvc` (instalado pelo `rustup`).
-- Visual Studio ou Build Tools com a carga **Desenvolvimento para desktop com
-  C++** (traz o linker MSVC e o SDK do Windows).
-
-```bash
-cargo test
-```
-
-Versão de desenvolvimento, com o log num console (`Ctrl+C` encerra):
-
-```bash
-cargo run -p thumbring
-```
-
-Versão de release dos dois programas, que rodam sem console:
-
-```bash
-cargo build --release -p thumbring -p thumbring-settings
-```
-
-Depois abra `target\release\thumbring.exe`. `--dir <pasta>` guarda o arquivo
-de configuração e o log numa pasta só, o que ajuda a testar sem mexer na sua
-configuração de verdade. Os arquivos de cada versão são montados por
-[`packaging/package.ps1`](packaging/package.ps1).
-
-A janela de configurações é um programa à parte, que precisa do WebView2
-Runtime (ele vem com o Windows 11 e com as atualizações do Windows 10). A
-interface dela é HTML, CSS e JavaScript puros, em
-[`settings/ui`](settings/ui), sem etapa de build:
-
-```bash
-cargo run -p thumbring-settings -- --dir <pasta>
-```
-
-`--dir` funciona como no motor; sem ele, a janela edita o seu arquivo de
-configuração de verdade. O menu da bandeja do motor > Open settings abre a
-janela que está ao lado do `thumbring.exe` e repassa o `--dir` do próprio
-motor, então os dois usam o mesmo arquivo.
-
-## Estrutura
-
-```
-core/       biblioteca (thumbring-core): lógica pura e testável, sem APIs do
-            Windows: máquina de estados do anel, gestos, comandos, perfis e
-            arquivo de configuração
-engine/     programa Windows (thumbring.exe): hook de mouse, ícone na bandeja,
-            executor de comandos e o anel, desenhado na GPU
-settings/   janela de configurações (thumbring-settings.exe): edita o arquivo
-            de configuração mantendo os comentários; interface em settings/ui
-packaging/  empacotamento das versões: instalador, avisos de licença
-```
-
-## Como contribuir
-
-Relatos de bugs, ideias e pull requests são bem-vindos. O
-[CONTRIBUTING.md](CONTRIBUTING.md) (em inglês) explica como as mudanças
-entram. Problemas de segurança devem ser relatados em particular, como
-descrito no [SECURITY.md](SECURITY.md).
-
-## Licença
-
-Distribuído sob uma das duas licenças abaixo, à sua escolha:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) ou
-  <https://www.apache.org/licenses/LICENSE-2.0>)
-- Licença MIT ([LICENSE-MIT](LICENSE-MIT) ou <https://opensource.org/licenses/MIT>)
-
-Os ícones do anel em [`engine/assets/icons`](engine/assets/icons) e os da
-janela de configurações em [`settings/ui/icons`](settings/ui/icons) vêm do
-[Lucide](https://lucide.dev) e estão sob a licença ISC
-([LICENSE-LUCIDE](engine/assets/icons/LICENSE-LUCIDE)).
-
-### Contribuições
-
-Salvo indicação explícita em contrário, qualquer contribuição enviada
-intencionalmente para inclusão neste trabalho, conforme definido na licença
-Apache-2.0, será licenciada duplamente como acima, sem termos ou condições
-adicionais.

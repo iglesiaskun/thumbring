@@ -25,6 +25,61 @@ Open an issue with the bug report or feature request template. Please search
 the open issues first. Security problems are the exception: report them
 privately, as [SECURITY.md](SECURITY.md) explains.
 
+## Building from source
+
+Requirements (Windows only):
+
+- Stable Rust with the `x86_64-pc-windows-msvc` target (installed by `rustup`).
+- Visual Studio or Build Tools with the **Desktop development with C++**
+  workload (provides the MSVC linker and the Windows SDK).
+
+```bash
+cargo test
+```
+
+Development build, with the log in a console (`Ctrl+C` quits):
+
+```bash
+cargo run -p thumbring
+```
+
+Release build of both programs, which run without a console:
+
+```bash
+cargo build --release -p thumbring -p thumbring-settings
+```
+
+Then start `target\release\thumbring.exe`. `--dir <folder>` keeps the
+settings file and the log in one folder, which is handy for testing without
+touching your real settings. The release files are made by
+[`packaging/package.ps1`](packaging/package.ps1).
+
+The settings window is a separate program, which needs the WebView2 Runtime
+(it comes with Windows 11 and with the updates of Windows 10). Its interface
+is plain HTML, CSS and JavaScript in [`settings/ui`](settings/ui), with no
+build step:
+
+```bash
+cargo run -p thumbring-settings -- --dir <folder>
+```
+
+`--dir` works as in the engine; without it, the window edits your real
+settings file. The engine's tray menu > Open settings opens the window next to
+`thumbring.exe` and passes on its own `--dir`, so both use the same file.
+
+## Project layout
+
+```
+core/       library (thumbring-core): pure, testable logic with no Windows
+            APIs: ring state machine, gestures, commands, profiles and
+            the settings file
+engine/     Windows program (thumbring.exe): mouse hook, tray icon,
+            command runner and the ring, drawn on the GPU
+settings/   settings window (thumbring-settings.exe): edits the settings
+            file and keeps the user's comments; interface in settings/ui
+packaging/  release packaging: installer, license notices
+```
+
 ## Before opening a pull request
 
 If people will notice the change, add a line to [CHANGELOG.md](CHANGELOG.md)

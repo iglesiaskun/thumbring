@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Rules for AI agents working on Thumbring. The workflow for every contributor
-is in [CONTRIBUTING.md](CONTRIBUTING.md); what Thumbring does and how to build
-it are in [README.md](README.md).
+and how to build Thumbring are in [CONTRIBUTING.md](CONTRIBUTING.md); what it
+does is in [README.md](README.md).
 
 ## Build and check
 
