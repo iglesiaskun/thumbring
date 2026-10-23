@@ -48,8 +48,8 @@ cargo test --all
   and SECURITY.md promise.
 - Generic names only: code, tests, examples and docs name no brand or product
   of another company (write `browser.exe`, `editor.exe`). The exceptions are
-  what building and running need: Windows, GitHub, the build tools and the
-  Lucide credit.
+  what building, running and signing need: Windows, GitHub, the build tools,
+  the Lucide credit and SignPath, which signs the releases.
 - Icons come only from [Lucide](https://lucide.dev), unmodified, in
   `engine/assets/icons/` or `settings/ui/icons/`, next to `LICENSE-LUCIDE`.
 

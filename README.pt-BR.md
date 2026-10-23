@@ -220,14 +220,14 @@ bandeja ou coloque o `.exe` do jogo em `excluded`, na seção `[apps]` do arquiv
 de configuração.
 
 **Avisos do SmartScreen e de antivírus.** Os arquivos das versões ainda não
-têm assinatura digital: o certificado é caro para um projeto gratuito, e o
-plano é pedir a assinatura gratuita para projetos open source agora que a
-primeira versão saiu. Até lá, o
-SmartScreen do Windows avisa sobre um programa novo e sem reputação ("O
-Windows protegeu o computador"), e um antivírus pode desconfiar de um programa
-desconhecido que monitora o mouse e simula teclas, que é exatamente o que o
-Thumbring faz. Para conferir se o download é o mesmo que o GitHub compilou a
-partir deste repositório:
+têm assinatura digital: o certificado é caro para um projeto gratuito, então o
+Thumbring está pedindo a assinatura gratuita para projetos open source, como a
+["Política de assinatura de código"](#política-de-assinatura-de-código-code-signing-policy)
+explica. Até lá, o SmartScreen do Windows avisa sobre um programa novo e sem
+reputação ("O Windows protegeu o computador"), e um antivírus pode desconfiar
+de um programa desconhecido que monitora o mouse e simula teclas, que é
+exatamente o que o Thumbring faz. Para conferir se o download é o mesmo que o
+GitHub compilou a partir deste repositório:
 
 - compare a saída de `Get-FileHash <arquivo>` no PowerShell com a linha desse
   arquivo no `SHA256SUMS` da mesma versão;
@@ -304,8 +304,10 @@ redor do cursor.
 Esta primeira versão é pequena de propósito, e o que as pessoas disserem dela
 vai guiar as próximas. Na lista, por enquanto:
 
-- Versões com assinatura digital, por um programa gratuito de assinatura
-  para projetos open source, para o SmartScreen parar de avisar.
+- Versões com assinatura digital, pela assinatura gratuita para projetos open
+  source que o Thumbring está pedindo (veja a
+  ["Política de assinatura de código"](#política-de-assinatura-de-código-code-signing-policy)),
+  para o SmartScreen parar de avisar.
 - macOS e Linux, um dia: a lógica em `core/` continua sem APIs do Windows
   para isso.
 
@@ -322,6 +324,44 @@ entram e como compilar o Thumbring a partir do código.
 
 Problemas de segurança devem ser relatados em particular, como o
 [SECURITY.md](SECURITY.md) explica.
+
+## Política de assinatura de código (Code signing policy)
+
+O Thumbring está pedindo à [SignPath Foundation](https://signpath.org) a
+assinatura de código gratuita para projetos open source. Enquanto o pedido não
+for aprovado, os arquivos das versões não têm assinatura, e o Windows avisa
+sobre eles (veja ["Limitações conhecidas"](#limitações-conhecidas)). Depois da
+aprovação, eles serão assinados segundo esta política: assinatura de código
+gratuita fornecida pela [SignPath.io](https://about.signpath.io), certificado
+da [SignPath Foundation](https://signpath.org).
+
+Só são assinados os arquivos que o
+[workflow de release](.github/workflows/release.yml) compila no GitHub, a
+partir do código deste repositório: `thumbring.exe`, `thumbring-settings.exe`
+e o `.msi`. Programas de outros projetos nunca são assinados com este
+certificado.
+
+Papéis da equipe:
+
+- Autores: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun)
+- Revisores: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun),
+  que revisa todo pull request de outras pessoas
+- Aprovadores: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun),
+  que aprova à mão cada pedido de assinatura, uma versão por vez
+
+Todos da equipe devem usar autenticação em dois fatores no GitHub e na
+SignPath.
+
+### Política de privacidade
+
+Este programa não transfere nenhuma informação para outros sistemas em rede, a
+não ser quando quem o usa, instala ou opera pede isso explicitamente.
+
+O Thumbring não faz nenhuma conexão de rede por conta própria e não tem
+telemetria. Um comando das suas configurações que abre uma URL entrega a URL
+ao seu navegador padrão. A janela de configurações mostra só as páginas do
+próprio Thumbring, que vêm junto com ele, no WebView2 Runtime que vem com o
+Windows.
 
 ## Licença
 

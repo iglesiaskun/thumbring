@@ -206,9 +206,9 @@ fullscreen. Before playing online, pause Thumbring from the tray or add the
 game's `.exe` to `excluded` under `[apps]` in the settings file.
 
 **Warnings from SmartScreen and antivirus programs.** The release files are
-not code-signed yet: a certificate is expensive for a free project, and the
-plan is to apply for free signing for open source projects now that the first
-version is out. Until then, Windows
+not code-signed yet: a certificate is expensive for a free project, so
+Thumbring is applying for free code signing for open source projects, as the
+["Code signing policy"](#code-signing-policy) explains. Until then, Windows
 SmartScreen warns about a new program with no reputation ("Windows protected
 your PC"), and an antivirus may distrust an unknown program that hooks the
 mouse and simulates key presses, which is exactly what Thumbring does. To make
@@ -287,8 +287,9 @@ The thumb works the side buttons, and the ring opens around the cursor.
 This first release is small on purpose, and what people say about it shapes
 the next ones. On the list so far:
 
-- Code-signed releases, through a free signing program for open source
-  projects, so SmartScreen stops warning.
+- Code-signed releases, through the free code signing for open source
+  projects that Thumbring is applying for (see
+  ["Code signing policy"](#code-signing-policy)), so SmartScreen stops warning.
 - macOS and Linux, one day: the logic in `core/` stays free of Windows APIs
   for that.
 
@@ -304,6 +305,43 @@ build Thumbring from source.
 
 Please report security problems privately, as [SECURITY.md](SECURITY.md)
 explains.
+
+## Code signing policy
+
+Thumbring is applying to the [SignPath Foundation](https://signpath.org) for
+free code signing for open source projects. Until the application is
+approved, the release files are not signed, and Windows warns about them (see
+["Known limitations"](#known-limitations)). Once it is, they will be signed
+under this policy: free code signing provided by
+[SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+Only files built by the [Release workflow](.github/workflows/release.yml) on
+GitHub, from the source code in this repository, are signed:
+`thumbring.exe`, `thumbring-settings.exe` and the `.msi`. Programs from other
+projects are never signed with this certificate.
+
+Team roles:
+
+- Authors: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun)
+- Reviewers: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun),
+  who reviews every pull request from other contributors
+- Approvers: [Pedro Iglesias (@iglesiaskun)](https://github.com/iglesiaskun),
+  who approves each signing request by hand, one release at a time
+
+Every team member must use two-factor authentication on GitHub and on
+SignPath.
+
+### Privacy policy
+
+This program will not transfer any information to other networked systems
+unless specifically requested by the user or the person installing or
+operating it.
+
+Thumbring makes no network connections of its own and has no telemetry. A
+command in your settings that opens a URL hands it to your default browser.
+The settings window shows only Thumbring's own pages, which come with it, on
+the WebView2 Runtime that comes with Windows.
 
 ## License
 
